@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a14">
+<title>Meeting Notes</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg-app:#0a0a14;
+  --bg-sidebar:#111120;
+  --bg-main:#0f0f1e;
+  --bg-card:#1a1a2e;
+  --bg-card-hover:#1e1e38;
+  --bg-input:#16162a;
+  --bg-modal:#13131f;
+  --accent:#7c3aed;
+  --accent-h:#6d28d9;
+  --accent-glow:rgba(124,58,237,0.2);
+  --accent-light:#a78bfa;
+  --text-1:#e2e8f0;
+  --text-2:#94a3b8;
+  --text-3:#64748b;
+  --border:rgba(255,255,255,0.07);
+  --border-s:rgba(255,255,255,0.13);
+  --danger:#ef4444;
+  --success:#10b981;
+  --warning:#f59e0b;
+  --sidebar-w:272px;
+  --topbar-h:58px;
+  --r:10px;
+  --r-sm:6px;
+}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-app);color:var(--text-1);font-size:15px;line-height:1.5;}
+#app{display:flex;height:100dvh;overflow:hidden;}
+
+/* ── Sidebar ── */
+.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);height:100dvh;background:var(--bg-sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:transform .28s ease;z-index:100;}
+.sb-head{padding:18px 14px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.app-logo{display:flex;align-items:center;gap:9px;}
+.app-logo-icon{width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.app-title{font-size:16px;font-weight:700;letter-spacing:-.3px;}
+.sb-close{display:none;}
+.sb-label{padding:12px 14px 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3);}
+.meeting-list{flex:1;overflow-y:auto;padding:6px 8px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.meeting-list::-webkit-scrollbar{width:4px;} .meeting-list::-webkit-scrollbar-thumb{background:var(--border-s);border-radius:2px;}
+.meeting-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--r-sm);cursor:pointer;transition:background .13s;color:var(--text-2);font-size:14px;user-select:none;}
+.meeting-item:hover{background:var(--bg-card);color:var(--text-1);}
+.meeting-item.active{background:var(--accent-glow);color:var(--accent-light);font-weight:500;}
+.meeting-item-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.meeting-item-del{opacity:0;background:none;border:none;color:var(--danger);cursor:pointer;padding:2px 5px;border-radius:4px;font-size:13px;flex-shrink:0;transition:opacity .13s;line-height:1;}
+.meeting-item:hover .meeting-item-del{opacity:1;}
+.sb-foot{padding:10px 8px;border-top:1px solid var(--border);}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;}
+
+/* ── Main ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg-main);min-width:0;}
+
+/* ── Topbar ── */
+.topbar{height:var(--topbar-h);min-height:var(--topbar-h);display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--border);gap:10px;}
+.topbar-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+.menu-btn{display:none;background:none;border:none;color:var(--text-2);font-size:20px;cursor:pointer;padding:4px;border-radius:6px;flex-shrink:0;line-height:1;}
+.meeting-title{font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r-sm);border:1px solid var(--border-s);background:var(--bg-card);color:var(--text-2);font-size:13px;font-weight:500;cursor:pointer;transition:all .14s;white-space:nowrap;font-family:inherit;}
+.btn:hover{background:var(--bg-card-hover);color:var(--text-1);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent-h);border-color:var(--accent-h);color:#fff;}
+.btn-danger{background:rgba(239,68,68,.12);border-color:var(--danger);color:var(--danger);}
+.btn-danger:hover{background:var(--danger);color:#fff;}
+.btn-full{width:100%;justify-content:center;}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-icon{padding:6px;background:none;border:none;color:var(--text-3);cursor:pointer;border-radius:var(--r-sm);transition:all .14s;font-size:17px;line-height:1;}
+.btn-icon:hover{background:var(--bg-card);color:var(--text-1);}
+.btn.drive-on{border-color:var(--success);color:var(--success);}
+
+/* ── Category bar ── */
+.cat-bar{display:flex;align-items:center;gap:3px;padding:9px 18px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.cat-bar::-webkit-scrollbar{display:none;}
+.cat-tab{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:20px;border:1px solid transparent;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .14s;color:var(--text-2);background:none;font-family:inherit;}
+.cat-tab:hover{background:var(--bg-card);color:var(--text-1);}
+.cat-tab.active{color:#fff;}
+.cat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+/* ── Notes area ── */
+.notes-area{flex:1;overflow-y:auto;padding:20px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.notes-area::-webkit-scrollbar{width:6px;} .notes-area::-webkit-scrollbar-thumb{background:var(--border-s);border-radius:3px;}
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;}
+.note-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:15px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden;}
+.note-card:hover{background:var(--bg-card-hover);border-color:var(--border-s);transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,0,0,.35);}
+.note-card-top{height:3px;position:absolute;top:0;left:0;right:0;}
+.note-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;}
+.note-card-title{font-size:14px;font-weight:600;color:var(--text-1);line-height:1.35;flex:1;}
+.note-card-del{opacity:0;background:none;border:none;color:var(--danger);cursor:pointer;padding:2px;border-radius:4px;font-size:13px;flex-shrink:0;transition:opacity .13s;line-height:1;}
+.note-card:hover .note-card-del{opacity:1;}
+.note-card-meta{display:flex;align-items:center;gap:7px;margin-bottom:9px;flex-wrap:wrap;}
+.cat-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
+.note-date{font-size:11px;color:var(--text-3);}
+.note-preview{font-size:13px;color:var(--text-2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.add-note-row{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-start;}
+
+/* ── Empty state ── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:280px;text-align:center;gap:10px;}
+.empty-icon{font-size:44px;opacity:.35;}
+.empty-title{font-size:16px;font-weight:600;color:var(--text-2);}
+.empty-sub{font-size:13px;color:var(--text-3);max-width:280px;}
+
+/* ── Modals ── */
+.modal{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal.hidden{display:none;}
+.modal-bd{position:absolute;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);}
+.modal-d{position:relative;z-index:1;background:var(--bg-modal);border:1px solid var(--border-s);border-radius:14px;overflow:hidden;width:100%;max-width:540px;max-height:90dvh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.6);}
+.modal-d.lg{max-width:700px;}
+.modal-d.sm{max-width:390px;}
+.modal-head{padding:18px 18px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.modal-head h3{font-size:16px;font-weight:600;flex:1;}
+.modal-body{padding:18px;overflow-y:auto;flex:1;}
+.modal-foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:8px;}
+.modal-foot.split{justify-content:space-between;}
+
+/* ── Forms ── */
+.input,.sel{width:100%;padding:8px 11px;background:var(--bg-input);border:1px solid var(--border-s);border-radius:var(--r-sm);color:var(--text-1);font-size:14px;font-family:inherit;outline:none;transition:border-color .14s;-webkit-appearance:none;}
+.input:focus,.sel:focus{border-color:var(--accent);}
+.input::placeholder{color:var(--text-3);}
+.sel option{background:var(--bg-card);}
+.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.fg label{font-size:13px;font-weight:500;color:var(--text-2);}
+.note-title-input{flex:1;background:none;border:none;outline:none;font-size:19px;font-weight:600;color:var(--text-1);font-family:inherit;}
+.note-title-input::placeholder{color:var(--text-3);}
+.meta-row{display:flex;gap:14px;align-items:center;padding:9px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.meta-label{font-size:12px;font-weight:500;color:var(--text-3);white-space:nowrap;}
+.divider{height:1px;background:var(--border);margin:14px 0;}
+.info-box{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.28);border-radius:var(--r-sm);padding:12px 13px;font-size:13px;color:var(--text-2);line-height:1.65;}
+.info-box code{background:rgba(255,255,255,.09);padding:1px 5px;border-radius:3px;font-size:12px;color:var(--accent-light);}
+.info-box a{color:var(--accent-light);}
+.setup-ol{margin:6px 0 0 16px;display:flex;flex-direction:column;gap:3px;}
+
+/* ── Color grid ── */
+.color-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px;}
+.color-opt{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .14s,border-color .14s;}
+.color-opt:hover{transform:scale(1.2);}
+.color-opt.sel{border-color:#fff;transform:scale(1.2);}
+
+/* ── Category list ── */
+.cat-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.cat-row:last-child{border-bottom:none;}
+.cat-swatch{width:18px;height:18px;border-radius:50%;flex-shrink:0;}
+.cat-row-name{flex:1;font-size:14px;font-weight:500;}
+
+/* ── Drive status ── */
+.drive-status-dot{width:10px;height:10px;border-radius:50%;background:var(--text-3);}
+.drive-status-dot.on{background:var(--success);}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+.drive-status-dot.sync{background:var(--warning);animation:blink 1s infinite;}
+
+/* ── Toast ── */
+.toast-wrap{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:7px;align-items:center;pointer-events:none;}
+.toast{background:var(--bg-card);border:1px solid var(--border-s);color:var(--text-1);padding:9px 17px;border-radius:20px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.45);animation:toastIn .25s ease forwards;white-space:nowrap;}
+.toast.ok{border-color:var(--success);color:var(--success);}
+.toast.err{border-color:var(--danger);color:var(--danger);}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── Quill dark overrides ── */
+.ql-toolbar.ql-snow{background:rgba(0,0,0,.3)!important;border:none!important;border-bottom:1px solid var(--border)!important;padding:7px 10px!important;flex-shrink:0;}
+.ql-container.ql-snow{border:none!important;background:transparent!important;flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.ql-editor{color:var(--text-1)!important;font-size:14px!important;line-height:1.65!important;padding:14px 18px!important;flex:1;}
+.ql-editor.ql-blank::before{color:var(--text-3)!important;font-style:normal!important;}
+.ql-snow .ql-stroke{stroke:var(--text-2)!important;}
+.ql-snow .ql-fill{fill:var(--text-2)!important;}
+.ql-snow .ql-picker-label{color:var(--text-2)!important;}
+.ql-snow button:hover .ql-stroke,.ql-snow button.ql-active .ql-stroke{stroke:var(--accent-light)!important;}
+.ql-snow button:hover .ql-fill,.ql-snow button.ql-active .ql-fill{fill:var(--accent-light)!important;}
+.ql-snow button:hover,.ql-snow button.ql-active{color:var(--accent-light)!important;}
+.ql-snow .ql-picker-options{background:var(--bg-card)!important;border-color:var(--border-s)!important;}
+.ql-snow .ql-picker-options .ql-picker-item{color:var(--text-1)!important;}
+.ql-snow .ql-tooltip{background:var(--bg-card)!important;border-color:var(--border-s)!important;color:var(--text-1)!important;box-shadow:0 4px 20px rgba(0,0,0,.5)!important;z-index:9999;}
+.ql-snow .ql-tooltip input[type=text]{background:var(--bg-input)!important;border-color:var(--border-s)!important;color:var(--text-1)!important;}
+.ql-snow .ql-tooltip a{color:var(--accent-light)!important;}
+.editor-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
+
+/* ── Misc ── */
+.hidden{display:none!important;}
+.text-muted{color:var(--text-3);font-size:13px;}
+.mt-8{margin-top:8px;}
+
+/* ── Mobile ── */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);box-shadow:none;}
+  .sidebar.open{transform:translateX(0);box-shadow:6px 0 32px rgba(0,0,0,.55);}
+  .sb-overlay.vis{display:block;}
+  .sb-close{display:flex;}
+  .menu-btn{display:block;}
+  .topbar{padding:0 12px;}
+  .topbar-right .btn:not(.btn-icon){display:none;}
+  .notes-area{padding:12px;}
+  .notes-grid{grid-template-columns:1fr;}
+  .modal{padding:0;align-items:flex-end;}
+  .modal-d{border-radius:20px 20px 0 0;max-height:92dvh;max-width:100%!important;}
+  .meta-row{gap:9px;}
+  .add-note-row{padding:10px 12px;}
+}
+@media(max-width:480px){
+  .meeting-title{font-size:15px;}
+  .topbar-right .btn-icon:nth-child(n+3){display:none;}
+}
+
+/* ── Note editor modal fixed height ── */
+#note-modal .modal-d{height:88dvh;}
+@media(max-width:768px){#note-modal .modal-d{height:94dvh;}}
+
+/* ── Mobile action strip ── */
+.mob-strip{display:none;padding:8px 10px;gap:6px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.mob-strip::-webkit-scrollbar{display:none;}
+@media(max-width:768px){.mob-strip{display:flex;}}
+
+#import-file{display:none;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Sidebar overlay -->
+  <div id="sb-overlay" class="sb-overlay"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sb-head">
+      <div class="app-logo">
+        <div class="app-logo-icon">📋</div>
+        <span class="app-title">Meeting Notes</span>
+      </div>
+      <button id="sb-close-btn" class="btn-icon sb-close" title="Close">✕</button>
+    </div>
+    <div class="sb-label">Meetings</div>
+    <div id="meeting-list" class="meeting-list"></div>
+    <div class="sb-foot">
+      <button id="add-meeting-btn" class="btn btn-primary btn-full">+ New Meeting</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button id="menu-btn" class="menu-btn">☰</button>
+        <span id="meeting-title" class="meeting-title">Select a Meeting</span>
+      </div>
+      <div class="topbar-right">
+        <button id="export-btn" class="btn btn-sm" title="Export">↑ Export</button>
+        <button id="import-btn" class="btn btn-sm" title="Import">↓ Import</button>
+        <button id="drive-btn" class="btn btn-sm" title="Google Drive">☁ Drive</button>
+        <button id="cats-btn" class="btn-icon" title="Manage categories">🏷</button>
+      </div>
+    </header>
+
+    <!-- Mobile strip -->
+    <div class="mob-strip">
+      <button id="m-export-btn" class="btn btn-sm">↑ Export</button>
+      <button id="m-import-btn" class="btn btn-sm">↓ Import</button>
+      <button id="m-drive-btn" class="btn btn-sm">☁ Drive</button>
+      <button id="m-cats-btn" class="btn btn-sm">🏷 Categories</button>
+    </div>
+
+    <!-- Category bar -->
+    <div id="cat-bar" class="cat-bar hidden"></div>
+
+    <!-- Notes -->
+    <div id="notes-area" class="notes-area">
+      <div id="empty-state" class="empty">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">Welcome to Meeting Notes</div>
+        <div class="empty-sub">Create or select a meeting in the sidebar to get started.</div>
+      </div>
+      <div id="notes-grid" class="notes-grid hidden"></div>
+    </div>
+
+    <!-- Add note bar -->
+    <div id="add-note-row" class="add-note-row hidden">
+      <button id="add-note-btn" class="btn btn-primary">+ Add Note</button>
+    </div>
+  </main>
+</div>
+
+<!-- ══ Note Editor Modal ══ -->
+<div id="note-modal" class="modal hidden">
+  <div class="modal-bd" data-close="note-modal"></div>
+  <div class="modal-d lg">
+    <div class="modal-head">
+      <input id="note-title-input" class="note-title-input" placeholder="Untitled note…">
+      <button class="btn-icon" data-close="note-modal">✕</button>
+    </div>
+    <div class="meta-row">
+      <span class="meta-label">Category</span>
+      <select id="note-cat-sel" class="sel" style="flex:1;max-width:200px;"></select>
+      <span class="meta-label">Date</span>
+      <input type="date" id="note-date" class="input" style="flex:1;max-width:160px;">
+    </div>
+    <div class="editor-wrap">
+      <div id="quill-editor"></div>
+    </div>
+    <div class="modal-foot split">
+      <button id="del-note-btn" class="btn btn-danger hidden">Delete</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" data-close="note-modal">Cancel</button>
+        <button id="save-note-btn" class="btn btn-primary">Save Note</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ New Meeting Modal ══ -->
+<div id="meeting-modal" class="modal hidden">
+  <div class="modal-bd" data-close="meeting-modal"></div>
+  <div class="modal-d sm">
+    <div class="modal-head">
+      <h3>New Meeting</h3>
+      <button class="btn-icon" data-close="meeting-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label>Meeting name</label>
+        <input id="meeting-name-input" class="input" placeholder="e.g. Q3 Planning, Team Standup…" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close="meeting-modal">Cancel</button>
+      <button id="save-meeting-btn" class="btn btn-primary">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Categories Modal ══ -->
+<div id="cats-modal" class="modal hidden">
+  <div class="modal-bd" data-close="cats-modal"></div>
+  <div class="modal-d sm">
+    <div class="modal-head">
+      <h3>Categories</h3>
+      <button class="btn-icon" data-close="cats-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="cats-list"></div>
+      <div class="divider"></div>
+      <div class="fg">
+        <label>New category name</label>
+        <input id="new-cat-name" class="input" placeholder="e.g. Risks, Decisions…">
+      </div>
+      <div class="fg">
+        <label>Color</label>
+        <div id="color-grid" class="color-grid"></div>
+      </div>
+      <button id="add-cat-btn" class="btn btn-primary btn-full mt-8">Add Category</button>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-full" data-close="cats-modal">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Drive Modal ══ -->
+<div id="drive-modal" class="modal hidden">
+  <div class="modal-bd" data-close="drive-modal"></div>
+  <div class="modal-d">
+    <div class="modal-head">
+      <h3>☁ Google Drive Sync</h3>
+      <button class="btn-icon" data-close="drive-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="drive-disc">
+        <div class="info-box" style="margin-bottom:14px;">
+          <strong>Setup steps</strong> — one-time Google Cloud config required:
+          <ol class="setup-ol">
+            <li>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener">console.cloud.google.com</a></li>
+            <li>Create a project → enable <strong>Google Drive API</strong></li>
+            <li>Credentials → Create <strong>OAuth 2.0 Client ID</strong> → Web Application</li>
+            <li>Add your app URL to <strong>Authorized JavaScript origins</strong>:<br><code id="origin-display"></code></li>
+            <li>Paste the Client ID below and click Connect</li>
+          </ol>
+          <br>Your data saves as <code>meeting-notes-data.json</code> in your Drive — accessible from any device.
+        </div>
+        <div class="fg">
+          <label>Google OAuth Client ID</label>
+          <input id="drive-cid" class="input" placeholder="xxxxxxxxx.apps.googleusercontent.com">
+        </div>
+        <button id="drive-connect-btn" class="btn btn-primary btn-full">Connect Google Drive</button>
+      </div>
+      <div id="drive-conn" class="hidden">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+          <div class="drive-status-dot on" style="width:12px;height:12px;"></div>
+          <div>
+            <div style="font-weight:600;">Connected to Google Drive</div>
+            <div class="text-muted">Data file: meeting-notes-data.json</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button id="drive-upload-btn" class="btn btn-primary btn-full">↑ Upload to Drive (overwrite cloud)</button>
+          <button id="drive-download-btn" class="btn btn-full">↓ Download from Drive (overwrite local)</button>
+          <div class="divider"></div>
+          <div id="drive-sync-time" class="text-muted" style="text-align:center;"></div>
+          <button id="drive-disconnect-btn" class="btn btn-danger btn-full">Disconnect</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Confirm Modal ══ -->
+<div id="confirm-modal" class="modal hidden">
+  <div class="modal-bd"></div>
+  <div class="modal-d sm">
+    <div class="modal-head"><h3 id="confirm-title">Confirm</h3></div>
+    <div class="modal-body"><p id="confirm-msg" style="color:var(--text-2);font-size:14px;"></p></div>
+    <div class="modal-foot">
+      <button id="confirm-cancel" class="btn">Cancel</button>
+      <button id="confirm-ok" class="btn btn-danger">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- Hidden file input -->
+<input type="file" id="import-file" accept=".json">
+
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script>
+'use strict';
+
+// ══════════════════════════════════════════
+// DB
+// ══════════════════════════════════════════
+const DB = (() => {
+  let db;
+  const open = () => new Promise((res, rej) => {
+    const r = indexedDB.open('MeetingNotesDB', 1);
+    r.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('meetings')) d.createObjectStore('meetings', {keyPath:'id'}).createIndex('createdAt','createdAt');
+      if (!d.objectStoreNames.contains('categories')) d.createObjectStore('categories', {keyPath:'id'});
+      if (!d.objectStoreNames.contains('notes')) {
+        const ns = d.createObjectStore('notes', {keyPath:'id'});
+        ns.createIndex('meetingId','meetingId');
+      }
+      if (!d.objectStoreNames.contains('settings')) d.createObjectStore('settings', {keyPath:'key'});
+    };
+    r.onsuccess = e => { db = e.target.result; res(db); };
+    r.onerror = () => rej(r.error);
+  });
+  const tx = (s, m='readonly') => db.transaction(s, m);
+  const getAll = s => new Promise((res,rej) => { const r=tx(s).objectStore(s).getAll(); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+  const put = (s, v) => new Promise((res,rej) => { const r=tx(s,'readwrite').objectStore(s).put(v); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+  const del = (s, id) => new Promise((res,rej) => { const r=tx(s,'readwrite').objectStore(s).delete(id); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error); });
+  const getSetting = k => new Promise((res,rej) => { const r=tx('settings').objectStore('settings').get(k); r.onsuccess=()=>res(r.result?.value??null); r.onerror=()=>rej(r.error); });
+  const setSetting = (k,v) => put('settings', {key:k,value:v});
+  const exportAll = async () => {
+    const [meetings,categories,notes] = await Promise.all([getAll('meetings'),getAll('categories'),getAll('notes')]);
+    return {meetings,categories,notes,exportedAt:new Date().toISOString(),version:1};
+  };
+  const importAll = async data => {
+    const t = db.transaction(['meetings','categories','notes'],'readwrite');
+    ['meetings','categories','notes'].forEach(s => t.objectStore(s).clear());
+    (data.meetings||[]).forEach(v=>t.objectStore('meetings').put(v));
+    (data.categories||[]).forEach(v=>t.objectStore('categories').put(v));
+    (data.notes||[]).forEach(v=>t.objectStore('notes').put(v));
+    return new Promise((res,rej)=>{ t.oncomplete=res; t.onerror=rej; });
+  };
+  return {open,getAll,put,del,getSetting,setSetting,exportAll,importAll};
+})();
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+const S = { meetings:[], categories:[], notes:[], meetingId:null, catId:'all', editNoteId:null };
+
+const COLORS = ['#7c3aed','#3b82f6','#10b981','#f59e0b','#ef4444','#ec4899','#06b6d4','#84cc16','#f97316','#8b5cf6','#14b8a6','#6366f1','#d946ef','#0ea5e9','#a3e635'];
+const DEFAULT_CATS = [
+  {id:'cat-q',name:'Questions',color:'#3b82f6'},
+  {id:'cat-d',name:'Discussion Points',color:'#10b981'},
+  {id:'cat-a',name:'Actions',color:'#f59e0b'},
+];
+let pickedColor = COLORS[0];
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+const uid = () => 'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
+const today = () => new Date().toISOString().slice(0,10);
+const fmtDate = d => { if(!d) return ''; const dt=new Date(d+'T00:00'); return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); };
+const strip = h => { const t=document.createElement('div'); t.innerHTML=h; return t.textContent||''; };
+const esc = s => String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const $  = id => document.getElementById(id);
+const openM  = id => $(id).classList.remove('hidden');
+const closeM = id => $(id).classList.add('hidden');
+
+const toast = (msg, type='') => {
+  const w=$('toast-wrap'), t=document.createElement('div');
+  t.className='toast'+(type?' '+type:''); t.textContent=msg; w.appendChild(t);
+  setTimeout(()=>{t.style.transition='opacity .3s';t.style.opacity='0';},2400);
+  setTimeout(()=>t.remove(),2700);
+};
+
+let _confirmResolve = null;
+const confirm = (title, msg) => new Promise(res => {
+  $('confirm-title').textContent=title; $('confirm-msg').textContent=msg;
+  _confirmResolve = res; openM('confirm-modal');
+});
+
+// ══════════════════════════════════════════
+// QUILL
+// ══════════════════════════════════════════
+let quill;
+const initQuill = () => {
+  quill = new Quill('#quill-editor', {
+    theme:'snow',
+    placeholder:'Write your note here…',
+    modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline','strike'],[{list:'ordered'},{list:'bullet'}],['blockquote','code-block'],['link'],['clean']]}
+  });
+  // Fix container flex layout after Quill inits
+  const qc = document.querySelector('.ql-container');
+  if (qc) { qc.style.flex='1'; qc.style.overflowY='auto'; }
+};
+
+// ══════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════
+const renderMeetings = () => {
+  const el=$('meeting-list');
+  if (!S.meetings.length) { el.innerHTML='<div class="text-muted" style="padding:10px 14px;">No meetings yet</div>'; return; }
+  el.innerHTML = S.meetings.map(m=>`
+    <div class="meeting-item${m.id===S.meetingId?' active':''}" data-mid="${m.id}">
+      <span>📋</span>
+      <span class="meeting-item-name">${esc(m.name)}</span>
+      <button class="meeting-item-del" data-del-mid="${m.id}" title="Delete">✕</button>
+    </div>`).join('');
+};
+
+const renderCatBar = () => {
+  const bar=$('cat-bar');
+  if (!S.meetingId) { bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  const mNotes = S.notes.filter(n=>n.meetingId===S.meetingId);
+  const counts = {}; mNotes.forEach(n=>{ counts[n.catId]=(counts[n.catId]||0)+1; });
+  const total = mNotes.length;
+  bar.innerHTML = `
+    <button class="cat-tab${S.catId==='all'?' active':''}" data-cid="all" style="${S.catId==='all'?'background:rgba(255,255,255,.1);':''}">
+      All <span style="opacity:.55;margin-left:2px;">${total}</span>
+    </button>
+    ${S.categories.map(c=>{
+      const active=S.catId===c.id;
+      return `<button class="cat-tab${active?' active':''}" data-cid="${c.id}"
+        style="${active?`background:${c.color};border-color:${c.color};`:''}">
+        <span class="cat-dot" style="background:${c.color};"></span>
+        ${esc(c.name)} <span style="opacity:.55;margin-left:2px;">${counts[c.id]||0}</span>
+      </button>`;
+    }).join('')}`;
+};
+
+const renderNotes = () => {
+  const grid=$('notes-grid'), empty=$('empty-state'), addRow=$('add-note-row');
+  if (!S.meetingId) {
+    grid.classList.add('hidden'); addRow.classList.add('hidden'); empty.classList.remove('hidden');
+    empty.innerHTML=`<div class="empty-icon">📋</div><div class="empty-title">Welcome to Meeting Notes</div><div class="empty-sub">Create or select a meeting in the sidebar.</div>`;
+    return;
+  }
+  addRow.classList.remove('hidden');
+  let notes = S.notes.filter(n=>n.meetingId===S.meetingId);
+  if (S.catId!=='all') notes=notes.filter(n=>n.catId===S.catId);
+  notes.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if (!notes.length) {
+    grid.classList.add('hidden'); empty.classList.remove('hidden');
+    const cn = S.catId==='all'?'':(' in '+(S.categories.find(c=>c.id===S.catId)?.name||''));
+    empty.innerHTML=`<div class="empty-icon">✏️</div><div class="empty-title">No notes${esc(cn)}</div><div class="empty-sub">Click "+ Add Note" to create one.</div>`;
+    return;
+  }
+  empty.classList.add('hidden'); grid.classList.remove('hidden');
+  grid.innerHTML = notes.map(n=>{
+    const cat=S.categories.find(c=>c.id===n.catId);
+    const col=cat?.color||'#7c3aed';
+    const prev=strip(n.content||'').slice(0,130);
+    return `<div class="note-card" data-nid="${n.id}">
+      <div class="note-card-top" style="background:${col};"></div>
+      <div class="note-card-head">
+        <div class="note-card-title">${esc(n.title||'Untitled')}</div>
+        <button class="note-card-del" data-del-nid="${n.id}" title="Delete">🗑</button>
+      </div>
+      <div class="note-card-meta">
+        <span class="cat-badge" style="background:${col}22;color:${col};">${esc(cat?.name||'—')}</span>
+        ${n.date?`<span class="note-date">${fmtDate(n.date)}</span>`:''}
+      </div>
+      ${prev?`<div class="note-preview">${esc(prev)}</div>`:''}
+    </div>`;
+  }).join('');
+};
+
+const renderCatManager = () => {
+  $('cats-list').innerHTML = S.categories.length
+    ? S.categories.map(c=>`
+      <div class="cat-row">
+        <div class="cat-swatch" style="background:${c.color};"></div>
+        <div class="cat-row-name">${esc(c.name)}</div>
+        <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger);padding:3px 8px;" data-del-cat="${c.id}">Remove</button>
+      </div>`).join('')
+    : '<div class="text-muted">No categories. Add one below.</div>';
+
+  $('color-grid').innerHTML = COLORS.map(c=>
+    `<div class="color-opt${c===pickedColor?' sel':''}" style="background:${c};" data-color="${c}"></div>`
+  ).join('');
+};
+
+// ══════════════════════════════════════════
+// ACTIONS — Meetings
+// ══════════════════════════════════════════
+const selectMeeting = id => {
+  S.meetingId=id; S.catId='all';
+  const m=S.meetings.find(m=>m.id===id);
+  $('meeting-title').textContent=m?.name||'Meeting Notes';
+  renderMeetings(); renderCatBar(); renderNotes();
+  if (window.innerWidth<=768) closeSidebar();
+};
+
+const addMeeting = async () => {
+  const name=$('meeting-name-input').value.trim();
+  if (!name) { toast('Enter a meeting name','err'); return; }
+  const m={id:uid(),name,createdAt:new Date().toISOString()};
+  await DB.put('meetings',m);
+  S.meetings.unshift(m);
+  closeM('meeting-modal'); $('meeting-name-input').value='';
+  renderMeetings(); selectMeeting(m.id);
+  toast('Meeting created','ok');
+};
+
+const deleteMeeting = async id => {
+  const m=S.meetings.find(m=>m.id===id);
+  const ok=await confirm('Delete Meeting',`Delete "${m?.name}"? All its notes will also be deleted.`);
+  if (!ok) return;
+  const toRm=S.notes.filter(n=>n.meetingId===id);
+  await Promise.all(toRm.map(n=>DB.del('notes',n.id)));
+  await DB.del('meetings',id);
+  S.meetings=S.meetings.filter(m=>m.id!==id);
+  S.notes=S.notes.filter(n=>n.meetingId!==id);
+  if (S.meetingId===id) { S.meetingId=S.meetings[0]?.id||null; $('meeting-title').textContent=S.meetings[0]?.name||'Select a Meeting'; }
+  renderMeetings(); renderCatBar(); renderNotes();
+  toast('Meeting deleted');
+};
+
+// ══════════════════════════════════════════
+// ACTIONS — Notes
+// ══════════════════════════════════════════
+const openNoteEditor = (noteId=null) => {
+  S.editNoteId=noteId;
+  const n=noteId?S.notes.find(n=>n.id===noteId):null;
+  $('note-title-input').value=n?.title||'';
+  $('note-date').value=n?.date||today();
+  $('note-cat-sel').innerHTML=S.categories.map(c=>`<option value="${c.id}"${n?.catId===c.id?' selected':''}>${esc(c.name)}</option>`).join('');
+  if (!n && S.catId!=='all') $('note-cat-sel').value=S.catId;
+  $('del-note-btn').classList.toggle('hidden',!noteId);
+  if (quill) quill.root.innerHTML=n?.content||'';
+  openM('note-modal');
+  setTimeout(()=>$('note-title-input').focus(),60);
+};
+
+const saveNote = async () => {
+  const title=$('note-title-input').value.trim()||'Untitled';
+  const date=$('note-date').value;
+  const catId=$('note-cat-sel').value;
+  const content=quill?quill.root.innerHTML:'';
+  const existing=S.editNoteId?S.notes.find(n=>n.id===S.editNoteId):null;
+  const note={
+    id:S.editNoteId||uid(), meetingId:S.meetingId,
+    title, date, catId, content,
+    createdAt:existing?.createdAt||new Date().toISOString(),
+    updatedAt:new Date().toISOString()
+  };
+  await DB.put('notes',note);
+  if (S.editNoteId) { const i=S.notes.findIndex(n=>n.id===S.editNoteId); if(i>=0) S.notes[i]=note; else S.notes.push(note); }
+  else S.notes.push(note);
+  closeM('note-modal'); renderCatBar(); renderNotes();
+  toast('Note saved','ok');
+};
+
+const deleteNote = async id => {
+  const ok=await confirm('Delete Note','This will permanently delete this note.');
+  if (!ok) return;
+  await DB.del('notes',id);
+  S.notes=S.notes.filter(n=>n.id!==id);
+  closeM('note-modal'); renderCatBar(); renderNotes();
+  toast('Note deleted');
+};
+
+// ══════════════════════════════════════════
+// ACTIONS — Categories
+// ══════════════════════════════════════════
+const addCat = async () => {
+  const name=$('new-cat-name').value.trim();
+  if (!name) { toast('Enter a category name','err'); return; }
+  const c={id:uid(),name,color:pickedColor};
+  await DB.put('categories',c);
+  S.categories.push(c);
+  $('new-cat-name').value='';
+  renderCatManager(); renderCatBar();
+  toast('Category added','ok');
+};
+
+const deleteCat = async id => {
+  const c=S.categories.find(c=>c.id===id);
+  const n=S.notes.filter(n=>n.catId===id).length;
+  const ok=await confirm('Remove Category', n>0
+    ? `Remove "${c?.name}"? ${n} note(s) will be reassigned to the first remaining category.`
+    : `Remove category "${c?.name}"?`);
+  if (!ok) return;
+  const remaining=S.categories.filter(c=>c.id!==id);
+  const fallback=remaining[0]?.id||'';
+  const toUpdate=S.notes.filter(n=>n.catId===id);
+  for (const note of toUpdate) { note.catId=fallback; await DB.put('notes',note); }
+  await DB.del('categories',id);
+  S.categories=remaining;
+  if (S.catId===id) S.catId='all';
+  renderCatManager(); renderCatBar(); renderNotes();
+  toast('Category removed');
+};
+
+// ══════════════════════════════════════════
+// IMPORT / EXPORT
+// ══════════════════════════════════════════
+const exportData = async () => {
+  const data=await DB.exportAll();
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`meeting-notes-${today()}.json`; a.click();
+  toast('Exported','ok');
+};
+
+const importData = async file => {
+  try {
+    const text=await file.text(); const data=JSON.parse(text);
+    if (!data.meetings||!data.categories||!data.notes) throw new Error('Invalid file format');
+    const ok=await confirm('Import Data','This will replace ALL current data. This cannot be undone.');
+    if (!ok) return;
+    await DB.importAll(data);
+    S.meetings=data.meetings; S.categories=data.categories; S.notes=data.notes;
+    S.meetingId=null; S.catId='all'; $('meeting-title').textContent='Select a Meeting';
+    renderMeetings(); renderCatBar(); renderNotes();
+    toast('Imported successfully','ok');
+  } catch(e) { toast('Import failed: '+e.message,'err'); }
+};
+
+// ══════════════════════════════════════════
+// GOOGLE DRIVE
+// ══════════════════════════════════════════
+const Drive = (() => {
+  let token=null, fileId=null, tokenClient=null, gisReady=false;
+  const FILE='meeting-notes-data.json';
+  const SCOPE='https://www.googleapis.com/auth/drive.file';
+
+  const loadGIS = () => new Promise((res,rej)=>{
+    if (gisReady) { res(); return; }
+    const s=document.createElement('script');
+    s.src='https://accounts.google.com/gsi/client';
+    s.onload=()=>{ gisReady=true; res(); }; s.onerror=rej;
+    document.head.appendChild(s);
+  });
+
+  const initClient = async cid => {
+    await loadGIS();
+    tokenClient=google.accounts.oauth2.initTokenClient({
+      client_id:cid, scope:SCOPE,
+      callback:()=>{}
+    });
+  };
+
+  const getToken = () => new Promise((res,rej)=>{
+    tokenClient.callback=r=>{ if(r.error){rej(new Error(r.error));return;} token=r.access_token; res(); };
+    tokenClient.requestAccessToken({prompt:token?'':'consent'});
+  });
+
+  const headers = () => ({Authorization:`Bearer ${token}`});
+
+  const findFile = async () => {
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=name%3D'${FILE}'%20and%20trashed%3Dfalse`,{headers:headers()});
+    const d=await r.json(); return d.files?.[0]?.id||null;
+  };
+
+  const upload = async json => {
+    if (!fileId) fileId=await findFile();
+    const blob=new Blob([json],{type:'application/json'});
+    if (fileId) {
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+        {method:'PATCH',headers:{...headers(),'Content-Type':'application/json'},body:blob});
+    } else {
+      const form=new FormData();
+      form.append('metadata',new Blob([JSON.stringify({name:FILE,mimeType:'application/json'})],{type:'application/json'}));
+      form.append('file',blob);
+      const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+        {method:'POST',headers:headers(),body:form});
+      fileId=(await r.json()).id;
+    }
+    await DB.setSetting('drive_sync',new Date().toISOString());
+    updateSyncTime();
+  };
+
+  const download = async () => {
+    if (!fileId) fileId=await findFile();
+    if (!fileId) throw new Error('No backup found on Drive');
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,{headers:headers()});
+    if (!r.ok) throw new Error('Download failed');
+    return r.text();
+  };
+
+  return {initClient,getToken,upload,download,isConnected:()=>!!token,disconnect:()=>{token=null;fileId=null;tokenClient=null;}};
+})();
+
+const updateSyncTime = async () => {
+  const t=await DB.getSetting('drive_sync');
+  $('drive-sync-time').textContent=t?'Last sync: '+new Date(t).toLocaleString():'Never synced';
+};
+
+const updateDriveView = () => {
+  const on=Drive.isConnected();
+  $('drive-disc').classList.toggle('hidden',on);
+  $('drive-conn').classList.toggle('hidden',!on);
+  $('drive-btn').classList.toggle('drive-on',on);
+  $('m-drive-btn').classList.toggle('drive-on',on);
+};
+
+const driveConnect = async () => {
+  const cid=$('drive-cid').value.trim();
+  if (!cid) { toast('Enter your OAuth Client ID','err'); return; }
+  try {
+    await Drive.initClient(cid);
+    await Drive.getToken();
+    await DB.setSetting('drive_cid',cid);
+    updateDriveView(); updateSyncTime();
+    toast('Google Drive connected!','ok');
+  } catch(e) { toast('Connect failed: '+e.message,'err'); }
+};
+
+const driveUpload = async () => {
+  try {
+    if (!Drive.isConnected()) await Drive.getToken();
+    const data=await DB.exportAll();
+    await Drive.upload(JSON.stringify(data,null,2));
+    toast('Uploaded to Drive','ok');
+  } catch(e) { toast('Upload failed: '+e.message,'err'); }
+};
+
+const driveDownload = async () => {
+  const ok=await confirm('Download from Drive','This will replace all local data with the Drive backup.');
+  if (!ok) return;
+  try {
+    if (!Drive.isConnected()) await Drive.getToken();
+    const text=await Drive.download();
+    const data=JSON.parse(text);
+    await DB.importAll(data);
+    S.meetings=data.meetings; S.categories=data.categories; S.notes=data.notes;
+    S.meetingId=null; $('meeting-title').textContent='Select a Meeting';
+    renderMeetings(); renderCatBar(); renderNotes();
+    toast('Downloaded from Drive','ok');
+    closeM('drive-modal');
+  } catch(e) { toast('Download failed: '+e.message,'err'); }
+};
+
+const driveDisconnect = async () => {
+  const ok=await confirm('Disconnect','Disconnect Google Drive?');
+  if (!ok) return;
+  Drive.disconnect(); await DB.setSetting('drive_cid',null);
+  updateDriveView(); toast('Disconnected');
+};
+
+// ══════════════════════════════════════════
+// SIDEBAR
+// ══════════════════════════════════════════
+const openSidebar  = () => { $('sidebar').classList.add('open'); $('sb-overlay').classList.add('vis'); };
+const closeSidebar = () => { $('sidebar').classList.remove('open'); $('sb-overlay').classList.remove('vis'); };
+
+// ══════════════════════════════════════════
+// EVENTS
+// ══════════════════════════════════════════
+const wire = () => {
+  // Sidebar
+  $('menu-btn').onclick=openSidebar;
+  $('sb-close-btn').onclick=closeSidebar;
+  $('sb-overlay').onclick=closeSidebar;
+
+  // Meeting list delegation
+  $('meeting-list').onclick=async e=>{
+    const del=e.target.closest('[data-del-mid]');
+    if (del) { await deleteMeeting(del.dataset.delMid); return; }
+    const item=e.target.closest('[data-mid]');
+    if (item) selectMeeting(item.dataset.mid);
+  };
+
+  // Add meeting
+  $('add-meeting-btn').onclick=()=>{ $('meeting-name-input').value=''; openM('meeting-modal'); setTimeout(()=>$('meeting-name-input').focus(),50); };
+  $('save-meeting-btn').onclick=addMeeting;
+  $('meeting-name-input').onkeydown=e=>{ if(e.key==='Enter') addMeeting(); };
+
+  // Category bar delegation
+  $('cat-bar').onclick=e=>{ const t=e.target.closest('[data-cid]'); if(t){ S.catId=t.dataset.cid; renderCatBar(); renderNotes(); } };
+
+  // Notes
+  $('add-note-btn').onclick=()=>openNoteEditor();
+  $('notes-grid').onclick=async e=>{
+    const del=e.target.closest('[data-del-nid]');
+    if (del) { e.stopPropagation(); await deleteNote(del.dataset.delNid); return; }
+    const card=e.target.closest('[data-nid]');
+    if (card) openNoteEditor(card.dataset.nid);
+  };
+  $('save-note-btn').onclick=saveNote;
+  $('del-note-btn').onclick=()=>{ if(S.editNoteId) deleteNote(S.editNoteId); };
+
+  // Categories
+  $('cats-btn').onclick=()=>{ renderCatManager(); openM('cats-modal'); };
+  $('m-cats-btn').onclick=()=>{ renderCatManager(); openM('cats-modal'); };
+  $('cats-list').onclick=async e=>{ const b=e.target.closest('[data-del-cat]'); if(b) await deleteCat(b.dataset.delCat); };
+  $('add-cat-btn').onclick=addCat;
+  $('new-cat-name').onkeydown=e=>{ if(e.key==='Enter') addCat(); };
+  $('color-grid').onclick=e=>{ const o=e.target.closest('[data-color]'); if(!o) return; pickedColor=o.dataset.color; document.querySelectorAll('.color-opt').forEach(el=>el.classList.toggle('sel',el.dataset.color===pickedColor)); };
+
+  // Export / Import
+  $('export-btn').onclick=$('m-export-btn').onclick=exportData;
+  $('import-btn').onclick=$('m-import-btn').onclick=()=>$('import-file').click();
+  $('import-file').onchange=async e=>{ if(e.target.files[0]){ await importData(e.target.files[0]); e.target.value=''; } };
+
+  // Drive
+  $('drive-btn').onclick=$('m-drive-btn').onclick=()=>{
+    $('origin-display').textContent=location.origin||location.href;
+    updateSyncTime(); updateDriveView(); openM('drive-modal');
+  };
+  $('drive-connect-btn').onclick=driveConnect;
+  $('drive-upload-btn').onclick=driveUpload;
+  $('drive-download-btn').onclick=driveDownload;
+  $('drive-disconnect-btn').onclick=driveDisconnect;
+
+  // Confirm
+  $('confirm-ok').onclick=()=>{ closeM('confirm-modal'); if(_confirmResolve){_confirmResolve(true);_confirmResolve=null;} };
+  $('confirm-cancel').onclick=()=>{ closeM('confirm-modal'); if(_confirmResolve){_confirmResolve(false);_confirmResolve=null;} };
+
+  // Close via data-close
+  document.addEventListener('click',e=>{
+    const el=e.target.closest('[data-close]');
+    if (el) closeM(el.dataset.close);
+  });
+
+  // Keyboard
+  document.addEventListener('keydown',e=>{
+    if (e.key==='Escape') ['note-modal','meeting-modal','cats-modal','drive-modal','confirm-modal'].forEach(closeM);
+    if ((e.ctrlKey||e.metaKey)&&e.key==='s') { e.preventDefault(); if(!$('note-modal').classList.contains('hidden')) saveNote(); }
+  });
+};
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+(async()=>{
+  await DB.open();
+  const [meetings,categories,notes]=await Promise.all([DB.getAll('meetings'),DB.getAll('categories'),DB.getAll('notes')]);
+  S.meetings=meetings.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  S.notes=notes;
+  if (categories.length===0) { for(const c of DEFAULT_CATS) await DB.put('categories',c); S.categories=[...DEFAULT_CATS]; }
+  else S.categories=categories;
+
+  // Restore saved Drive client ID (user still needs to click Connect to re-auth)
+  const savedCid=await DB.getSetting('drive_cid');
+  if (savedCid) $('drive-cid').value=savedCid;
+
+  initQuill();
+  renderMeetings(); renderCatBar(); renderNotes();
+  wire();
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
