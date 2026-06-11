@@ -659,7 +659,7 @@ const importData = async file => {
 // ══════════════════════════════════════════
 const GitHub = (() => {
   let token=null;
-  const OWNER='cloudhopper86', REPO='meeting-notes', FILE='meeting-notes-data.json';
+  const OWNER='cloudhopper86', REPO='meeting-notes-data', FILE='meeting-notes-data.json';
   const API=`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`;
   const hdrs = () => ({'Authorization':`Bearer ${token}`,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'});
 
