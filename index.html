@@ -882,6 +882,7 @@ const showSyncBanner = (msg, btnLabel, btnAction) => {
 const checkSyncOnOpen = async () => {
   const cid = await DB.getSetting('drive_cid');
   if (!cid || !navigator.onLine) return;
+  await Drive.initClient(cid);
   const lastSync = await DB.getSetting('drive_sync');
   const sinceSync = lastSync ? Date.now() - new Date(lastSync).getTime() : Infinity;
   const oneHour = 60 * 60 * 1000;
