@@ -9,6 +9,9 @@
 <title>Meeting Notes</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -37,7 +40,7 @@
   --r:10px;
   --r-sm:6px;
 }
-html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-app);color:var(--text-1);font-size:15px;line-height:1.5;}
+html,body{height:100%;overflow:hidden;font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-app);color:var(--text-1);font-size:15px;line-height:1.5;}
 #app{display:flex;height:100dvh;overflow:hidden;}
 
 /* ── Sidebar ── */
@@ -82,29 +85,30 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .btn-icon:hover{background:var(--bg-card);color:var(--text-1);}
 .btn.drive-on{border-color:var(--success);color:var(--success);}
 
-/* ── Category bar ── */
-.cat-bar{display:flex;align-items:center;gap:3px;padding:9px 18px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
-.cat-bar::-webkit-scrollbar{display:none;}
-.cat-tab{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:20px;border:1px solid transparent;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .14s;color:var(--text-2);background:none;font-family:inherit;}
-.cat-tab:hover{background:var(--bg-card);color:var(--text-1);}
-.cat-tab.active{color:#fff;}
-.cat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-
 /* ── Notes area ── */
 .notes-area{flex:1;overflow-y:auto;padding:20px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .notes-area::-webkit-scrollbar{width:6px;} .notes-area::-webkit-scrollbar-thumb{background:var(--border-s);border-radius:3px;}
 .notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;}
 .note-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:15px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden;}
 .note-card:hover{background:var(--bg-card-hover);border-color:var(--border-s);transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,0,0,.35);}
-.note-card-top{height:3px;position:absolute;top:0;left:0;right:0;}
+.note-card-top{height:3px;position:absolute;top:0;left:0;right:0;background:var(--accent);}
 .note-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;}
 .note-card-title{font-size:14px;font-weight:600;color:var(--text-1);line-height:1.35;flex:1;}
 .note-card-del{opacity:0;background:none;border:none;color:var(--danger);cursor:pointer;padding:2px;border-radius:4px;font-size:13px;flex-shrink:0;transition:opacity .13s;line-height:1;}
 .note-card:hover .note-card-del{opacity:1;}
-.note-card-meta{display:flex;align-items:center;gap:7px;margin-bottom:9px;flex-wrap:wrap;}
-.cat-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
-.note-date{font-size:11px;color:var(--text-3);}
-.note-preview{font-size:13px;color:var(--text-2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.note-preview{font-size:13px;color:var(--text-2);line-height:1.5;max-height:90px;overflow:hidden;}
+.note-preview p{margin:0 0 3px;}
+.note-preview p:last-child{margin-bottom:0;}
+.note-preview strong{color:var(--text-1);font-weight:600;}
+.note-preview em{font-style:italic;}
+.note-preview u{text-decoration:underline;}
+.note-preview s{text-decoration:line-through;}
+.note-preview ul,.note-preview ol{margin:0 0 3px 16px;padding:0;}
+.note-preview li{margin:0 0 1px;}
+.note-preview h1,.note-preview h2,.note-preview h3{font-size:14px;font-weight:600;margin:0 0 3px;color:var(--text-1);}
+.note-preview blockquote{border-left:2px solid var(--border-s);padding-left:8px;margin:0 0 3px;color:var(--text-3);}
+.note-preview pre{background:rgba(0,0,0,.3);padding:4px 8px;border-radius:4px;font-size:11px;margin:0 0 3px;overflow:hidden;}
+.note-preview a{color:var(--accent-light);}
 .add-note-row{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-start;}
 
 /* ── Empty state ── */
@@ -133,27 +137,13 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .sel option{background:var(--bg-card);}
 .fg{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
 .fg label{font-size:13px;font-weight:500;color:var(--text-2);}
-.note-title-input{flex:1;background:none;border:none;outline:none;font-size:19px;font-weight:600;color:var(--text-1);font-family:inherit;}
-.note-title-input::placeholder{color:var(--text-3);}
-.meta-row{display:flex;gap:14px;align-items:center;padding:9px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
-.meta-label{font-size:12px;font-weight:500;color:var(--text-3);white-space:nowrap;}
+.note-date-input{flex:1;background:none;border:none;outline:none;font-size:19px;font-weight:600;color:var(--text-1);font-family:inherit;cursor:pointer;color-scheme:dark;}
+.note-date-input::-webkit-calendar-picker-indicator{filter:invert(0.6);cursor:pointer;margin-left:4px;}
 .divider{height:1px;background:var(--border);margin:14px 0;}
 .info-box{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.28);border-radius:var(--r-sm);padding:12px 13px;font-size:13px;color:var(--text-2);line-height:1.65;}
 .info-box code{background:rgba(255,255,255,.09);padding:1px 5px;border-radius:3px;font-size:12px;color:var(--accent-light);}
 .info-box a{color:var(--accent-light);}
 .setup-ol{margin:6px 0 0 16px;display:flex;flex-direction:column;gap:3px;}
-
-/* ── Color grid ── */
-.color-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px;}
-.color-opt{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .14s,border-color .14s;}
-.color-opt:hover{transform:scale(1.2);}
-.color-opt.sel{border-color:#fff;transform:scale(1.2);}
-
-/* ── Category list ── */
-.cat-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
-.cat-row:last-child{border-bottom:none;}
-.cat-swatch{width:18px;height:18px;border-radius:50%;flex-shrink:0;}
-.cat-row-name{flex:1;font-size:14px;font-weight:500;}
 
 /* ── Drive status ── */
 .drive-status-dot{width:10px;height:10px;border-radius:50%;background:var(--text-3);}
@@ -171,7 +161,7 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 /* ── Quill dark overrides ── */
 .ql-toolbar.ql-snow{background:rgba(0,0,0,.3)!important;border:none!important;border-bottom:1px solid var(--border)!important;padding:7px 10px!important;flex-shrink:0;}
 .ql-container.ql-snow{border:none!important;background:transparent!important;flex:1;overflow-y:auto;display:flex;flex-direction:column;}
-.ql-editor{color:var(--text-1)!important;font-size:14px!important;line-height:1.65!important;padding:14px 18px!important;flex:1;}
+.ql-editor{color:var(--text-1)!important;font-size:14px!important;line-height:1.65!important;padding:14px 18px!important;flex:1;font-family:'Instrument Sans',sans-serif!important;}
 .ql-editor.ql-blank::before{color:var(--text-3)!important;font-style:normal!important;}
 .ql-snow .ql-stroke{stroke:var(--text-2)!important;}
 .ql-snow .ql-fill{fill:var(--text-2)!important;}
@@ -204,7 +194,6 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
   .notes-grid{grid-template-columns:1fr;}
   .modal{padding:0;align-items:flex-end;}
   .modal-d{border-radius:20px 20px 0 0;max-height:92dvh;max-width:100%!important;}
-  .meta-row{gap:9px;}
   .add-note-row{padding:10px 12px;}
 }
 @media(max-width:480px){
@@ -242,7 +231,7 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 </head>
 <body>
 
-<!-- Lock screen (shown before app loads) -->
+<!-- Lock screen -->
 <div id="lock-screen">
   <div class="lock-box">
     <div class="lock-icon">📋</div>
@@ -263,10 +252,8 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 
 <div id="app" style="display:none;">
 
-  <!-- Sidebar overlay -->
   <div id="sb-overlay" class="sb-overlay"></div>
 
-  <!-- Sidebar -->
   <aside id="sidebar" class="sidebar">
     <div class="sb-head">
       <div class="app-logo">
@@ -282,7 +269,6 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
     </div>
   </aside>
 
-  <!-- Main -->
   <main class="main">
     <header class="topbar">
       <div class="topbar-left">
@@ -293,19 +279,15 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
         <button id="export-btn" class="btn btn-sm" title="Export">↑ Export</button>
         <button id="import-btn" class="btn btn-sm" title="Import">↓ Import</button>
         <button id="drive-btn" class="btn btn-sm" title="Google Drive">☁ Drive</button>
-        <button id="cats-btn" class="btn-icon" title="Manage categories">🏷</button>
       </div>
     </header>
 
-    <!-- Mobile strip -->
     <div class="mob-strip">
       <button id="m-export-btn" class="btn btn-sm">↑ Export</button>
       <button id="m-import-btn" class="btn btn-sm">↓ Import</button>
       <button id="m-drive-btn" class="btn btn-sm">☁ Drive</button>
-      <button id="m-cats-btn" class="btn btn-sm">🏷 Categories</button>
     </div>
 
-    <!-- Sync nudge banner -->
     <div id="sync-banner" class="sync-banner hidden">
       <span id="sync-banner-msg"></span>
       <div style="display:flex;gap:8px;flex-shrink:0;">
@@ -314,10 +296,6 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
       </div>
     </div>
 
-    <!-- Category bar -->
-    <div id="cat-bar" class="cat-bar hidden"></div>
-
-    <!-- Notes -->
     <div id="notes-area" class="notes-area">
       <div id="empty-state" class="empty">
         <div class="empty-icon">📋</div>
@@ -327,7 +305,6 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
       <div id="notes-grid" class="notes-grid hidden"></div>
     </div>
 
-    <!-- Add note bar -->
     <div id="add-note-row" class="add-note-row hidden">
       <button id="add-note-btn" class="btn btn-primary">+ Add Note</button>
     </div>
@@ -339,14 +316,8 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
   <div class="modal-bd" data-close="note-modal"></div>
   <div class="modal-d lg">
     <div class="modal-head">
-      <input id="note-title-input" class="note-title-input" placeholder="Untitled note…">
+      <input type="date" id="note-date" class="note-date-input">
       <button class="btn-icon" data-close="note-modal">✕</button>
-    </div>
-    <div class="meta-row">
-      <span class="meta-label">Category</span>
-      <select id="note-cat-sel" class="sel" style="flex:1;max-width:200px;"></select>
-      <span class="meta-label">Date</span>
-      <input type="date" id="note-date" class="input" style="flex:1;max-width:160px;">
     </div>
     <div class="editor-wrap">
       <div id="quill-editor"></div>
@@ -378,33 +349,6 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
     <div class="modal-foot">
       <button class="btn" data-close="meeting-modal">Cancel</button>
       <button id="save-meeting-btn" class="btn btn-primary">Create</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ Categories Modal ══ -->
-<div id="cats-modal" class="modal hidden">
-  <div class="modal-bd" data-close="cats-modal"></div>
-  <div class="modal-d sm">
-    <div class="modal-head">
-      <h3>Categories</h3>
-      <button class="btn-icon" data-close="cats-modal">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="cats-list"></div>
-      <div class="divider"></div>
-      <div class="fg">
-        <label>New category name</label>
-        <input id="new-cat-name" class="input" placeholder="e.g. Risks, Decisions…">
-      </div>
-      <div class="fg">
-        <label>Color</label>
-        <div id="color-grid" class="color-grid"></div>
-      </div>
-      <button id="add-cat-btn" class="btn btn-primary btn-full mt-8">Add Category</button>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-full" data-close="cats-modal">Done</button>
     </div>
   </div>
 </div>
@@ -469,10 +413,7 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
   </div>
 </div>
 
-<!-- Toast container -->
 <div class="toast-wrap" id="toast-wrap"></div>
-
-<!-- Hidden file input -->
 <input type="file" id="import-file" accept=".json">
 
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
@@ -506,14 +447,13 @@ const DB = (() => {
   const getSetting = k => new Promise((res,rej) => { const r=tx('settings').objectStore('settings').get(k); r.onsuccess=()=>res(r.result?.value??null); r.onerror=()=>rej(r.error); });
   const setSetting = (k,v) => put('settings', {key:k,value:v});
   const exportAll = async () => {
-    const [meetings,categories,notes] = await Promise.all([getAll('meetings'),getAll('categories'),getAll('notes')]);
-    return {meetings,categories,notes,exportedAt:new Date().toISOString(),version:1};
+    const [meetings,notes] = await Promise.all([getAll('meetings'),getAll('notes')]);
+    return {meetings,notes,exportedAt:new Date().toISOString(),version:2};
   };
   const importAll = async data => {
-    const t = db.transaction(['meetings','categories','notes'],'readwrite');
-    ['meetings','categories','notes'].forEach(s => t.objectStore(s).clear());
+    const t = db.transaction(['meetings','notes'],'readwrite');
+    ['meetings','notes'].forEach(s => t.objectStore(s).clear());
     (data.meetings||[]).forEach(v=>t.objectStore('meetings').put(v));
-    (data.categories||[]).forEach(v=>t.objectStore('categories').put(v));
     (data.notes||[]).forEach(v=>t.objectStore('notes').put(v));
     return new Promise((res,rej)=>{ t.oncomplete=res; t.onerror=rej; });
   };
@@ -523,25 +463,30 @@ const DB = (() => {
 // ══════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════
-const S = { meetings:[], categories:[], notes:[], meetingId:null, catId:'all', editNoteId:null };
-
-const COLORS = ['#7c3aed','#3b82f6','#10b981','#f59e0b','#ef4444','#ec4899','#06b6d4','#84cc16','#f97316','#8b5cf6','#14b8a6','#6366f1','#d946ef','#0ea5e9','#a3e635'];
-const DEFAULT_CATS = [
-  {id:'cat-q',name:'Questions',color:'#3b82f6'},
-  {id:'cat-d',name:'Discussion Points',color:'#10b981'},
-  {id:'cat-a',name:'Actions',color:'#f59e0b'},
-];
-let pickedColor = COLORS[0];
+const S = { meetings:[], notes:[], meetingId:null, editNoteId:null };
 
 // ══════════════════════════════════════════
 // UTILS
 // ══════════════════════════════════════════
 const uid = () => 'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
 const today = () => new Date().toISOString().slice(0,10);
-const fmtDate = d => { if(!d) return ''; const dt=new Date(d+'T00:00'); return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); };
-const strip = h => { const t=document.createElement('div'); t.innerHTML=h; return t.textContent||''; };
+const fmtDate = d => { if(!d) return ''; const dt=new Date(d+'T00:00'); return dt.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); };
+const daysUntil = d => {
+  if (!d) return '';
+  const now = new Date(); now.setHours(0,0,0,0);
+  const target = new Date(d+'T00:00');
+  const diff = Math.round((target - now) / 86400000);
+  if (diff === 0) return 'today';
+  const abs = Math.abs(diff);
+  const suffix = diff < 0 ? ' ago' : '';
+  if (abs < 7) return `${abs} ${abs===1?'day':'days'}${suffix}`;
+  const weeks = Math.floor(abs/7), days = abs%7;
+  const wStr = `${weeks} ${weeks===1?'week':'weeks'}`;
+  if (days === 0) return wStr+suffix;
+  return `${wStr} and ${days} ${days===1?'day':'days'}${suffix}`;
+};
 const esc = s => String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const $  = id => document.getElementById(id);
+const $ = id => document.getElementById(id);
 const openM  = id => $(id).classList.remove('hidden');
 const closeM = id => $(id).classList.add('hidden');
 
@@ -568,7 +513,6 @@ const initQuill = () => {
     placeholder:'Write your note here…',
     modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline','strike'],[{list:'ordered'},{list:'bullet'}],['blockquote','code-block'],['link'],['clean']]}
   });
-  // Fix container flex layout after Quill inits
   const qc = document.querySelector('.ql-container');
   if (qc) { qc.style.flex='1'; qc.style.overflowY='auto'; }
 };
@@ -587,27 +531,6 @@ const renderMeetings = () => {
     </div>`).join('');
 };
 
-const renderCatBar = () => {
-  const bar=$('cat-bar');
-  if (!S.meetingId) { bar.classList.add('hidden'); return; }
-  bar.classList.remove('hidden');
-  const mNotes = S.notes.filter(n=>n.meetingId===S.meetingId);
-  const counts = {}; mNotes.forEach(n=>{ counts[n.catId]=(counts[n.catId]||0)+1; });
-  const total = mNotes.length;
-  bar.innerHTML = `
-    <button class="cat-tab${S.catId==='all'?' active':''}" data-cid="all" style="${S.catId==='all'?'background:rgba(255,255,255,.1);':''}">
-      All <span style="opacity:.55;margin-left:2px;">${total}</span>
-    </button>
-    ${S.categories.map(c=>{
-      const active=S.catId===c.id;
-      return `<button class="cat-tab${active?' active':''}" data-cid="${c.id}"
-        style="${active?`background:${c.color};border-color:${c.color};`:''}">
-        <span class="cat-dot" style="background:${c.color};"></span>
-        ${esc(c.name)} <span style="opacity:.55;margin-left:2px;">${counts[c.id]||0}</span>
-      </button>`;
-    }).join('')}`;
-};
-
 const renderNotes = () => {
   const grid=$('notes-grid'), empty=$('empty-state'), addRow=$('add-note-row');
   if (!S.meetingId) {
@@ -616,58 +539,32 @@ const renderNotes = () => {
     return;
   }
   addRow.classList.remove('hidden');
-  let notes = S.notes.filter(n=>n.meetingId===S.meetingId);
-  if (S.catId!=='all') notes=notes.filter(n=>n.catId===S.catId);
-  notes.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const notes = S.notes.filter(n=>n.meetingId===S.meetingId).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if (!notes.length) {
     grid.classList.add('hidden'); empty.classList.remove('hidden');
-    const cn = S.catId==='all'?'':(' in '+(S.categories.find(c=>c.id===S.catId)?.name||''));
-    empty.innerHTML=`<div class="empty-icon">✏️</div><div class="empty-title">No notes${esc(cn)}</div><div class="empty-sub">Click "+ Add Note" to create one.</div>`;
+    empty.innerHTML=`<div class="empty-icon">✏️</div><div class="empty-title">No notes yet</div><div class="empty-sub">Click "+ Add Note" to create one.</div>`;
     return;
   }
   empty.classList.add('hidden'); grid.classList.remove('hidden');
-  grid.innerHTML = notes.map(n=>{
-    const cat=S.categories.find(c=>c.id===n.catId);
-    const col=cat?.color||'#7c3aed';
-    const prev=strip(n.content||'').slice(0,130);
-    return `<div class="note-card" data-nid="${n.id}">
-      <div class="note-card-top" style="background:${col};"></div>
+  grid.innerHTML = notes.map(n=>`
+    <div class="note-card" data-nid="${n.id}">
+      <div class="note-card-top"></div>
       <div class="note-card-head">
-        <div class="note-card-title">${esc(n.title||'Untitled')}</div>
+        <div class="note-card-title">${esc(fmtDate(n.date)||'No date')}${n.date?` <span style="font-weight:400;color:var(--text-3);font-size:12px;">[${daysUntil(n.date)}]</span>`:''}</div>
         <button class="note-card-del" data-del-nid="${n.id}" title="Delete">🗑</button>
       </div>
-      <div class="note-card-meta">
-        <span class="cat-badge" style="background:${col}22;color:${col};">${esc(cat?.name||'—')}</span>
-        ${n.date?`<span class="note-date">${fmtDate(n.date)}</span>`:''}
-      </div>
-      ${prev?`<div class="note-preview">${esc(prev)}</div>`:''}
-    </div>`;
-  }).join('');
-};
-
-const renderCatManager = () => {
-  $('cats-list').innerHTML = S.categories.length
-    ? S.categories.map(c=>`
-      <div class="cat-row">
-        <div class="cat-swatch" style="background:${c.color};"></div>
-        <div class="cat-row-name">${esc(c.name)}</div>
-        <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger);padding:3px 8px;" data-del-cat="${c.id}">Remove</button>
-      </div>`).join('')
-    : '<div class="text-muted">No categories. Add one below.</div>';
-
-  $('color-grid').innerHTML = COLORS.map(c=>
-    `<div class="color-opt${c===pickedColor?' sel':''}" style="background:${c};" data-color="${c}"></div>`
-  ).join('');
+      ${n.content?`<div class="note-preview">${n.content}</div>`:''}
+    </div>`).join('');
 };
 
 // ══════════════════════════════════════════
 // ACTIONS — Meetings
 // ══════════════════════════════════════════
 const selectMeeting = id => {
-  S.meetingId=id; S.catId='all';
+  S.meetingId=id;
   const m=S.meetings.find(m=>m.id===id);
   $('meeting-title').textContent=m?.name||'Meeting Notes';
-  renderMeetings(); renderCatBar(); renderNotes();
+  renderMeetings(); renderNotes();
   if (window.innerWidth<=768) closeSidebar();
 };
 
@@ -692,7 +589,7 @@ const deleteMeeting = async id => {
   S.meetings=S.meetings.filter(m=>m.id!==id);
   S.notes=S.notes.filter(n=>n.meetingId!==id);
   if (S.meetingId===id) { S.meetingId=S.meetings[0]?.id||null; $('meeting-title').textContent=S.meetings[0]?.name||'Select a Meeting'; }
-  renderMeetings(); renderCatBar(); renderNotes();
+  renderMeetings(); renderNotes();
   toast('Meeting deleted');
 };
 
@@ -702,32 +599,27 @@ const deleteMeeting = async id => {
 const openNoteEditor = (noteId=null) => {
   S.editNoteId=noteId;
   const n=noteId?S.notes.find(n=>n.id===noteId):null;
-  $('note-title-input').value=n?.title||'';
   $('note-date').value=n?.date||today();
-  $('note-cat-sel').innerHTML=S.categories.map(c=>`<option value="${c.id}"${n?.catId===c.id?' selected':''}>${esc(c.name)}</option>`).join('');
-  if (!n && S.catId!=='all') $('note-cat-sel').value=S.catId;
   $('del-note-btn').classList.toggle('hidden',!noteId);
   if (quill) quill.root.innerHTML=n?.content||'';
   openM('note-modal');
-  setTimeout(()=>$('note-title-input').focus(),60);
+  setTimeout(()=>quill&&quill.focus(),80);
 };
 
 const saveNote = async () => {
-  const title=$('note-title-input').value.trim()||'Untitled';
-  const date=$('note-date').value;
-  const catId=$('note-cat-sel').value;
+  const date=$('note-date').value||today();
   const content=quill?quill.root.innerHTML:'';
   const existing=S.editNoteId?S.notes.find(n=>n.id===S.editNoteId):null;
   const note={
     id:S.editNoteId||uid(), meetingId:S.meetingId,
-    title, date, catId, content,
+    date, content,
     createdAt:existing?.createdAt||new Date().toISOString(),
     updatedAt:new Date().toISOString()
   };
   await DB.put('notes',note);
   if (S.editNoteId) { const i=S.notes.findIndex(n=>n.id===S.editNoteId); if(i>=0) S.notes[i]=note; else S.notes.push(note); }
   else S.notes.push(note);
-  closeM('note-modal'); renderCatBar(); renderNotes();
+  closeM('note-modal'); renderNotes();
   markDirty();
   toast('Note saved','ok');
 };
@@ -737,41 +629,9 @@ const deleteNote = async id => {
   if (!ok) return;
   await DB.del('notes',id);
   S.notes=S.notes.filter(n=>n.id!==id);
-  closeM('note-modal'); renderCatBar(); renderNotes();
+  closeM('note-modal'); renderNotes();
   markDirty();
   toast('Note deleted');
-};
-
-// ══════════════════════════════════════════
-// ACTIONS — Categories
-// ══════════════════════════════════════════
-const addCat = async () => {
-  const name=$('new-cat-name').value.trim();
-  if (!name) { toast('Enter a category name','err'); return; }
-  const c={id:uid(),name,color:pickedColor};
-  await DB.put('categories',c);
-  S.categories.push(c);
-  $('new-cat-name').value='';
-  renderCatManager(); renderCatBar();
-  toast('Category added','ok');
-};
-
-const deleteCat = async id => {
-  const c=S.categories.find(c=>c.id===id);
-  const n=S.notes.filter(n=>n.catId===id).length;
-  const ok=await confirm('Remove Category', n>0
-    ? `Remove "${c?.name}"? ${n} note(s) will be reassigned to the first remaining category.`
-    : `Remove category "${c?.name}"?`);
-  if (!ok) return;
-  const remaining=S.categories.filter(c=>c.id!==id);
-  const fallback=remaining[0]?.id||'';
-  const toUpdate=S.notes.filter(n=>n.catId===id);
-  for (const note of toUpdate) { note.catId=fallback; await DB.put('notes',note); }
-  await DB.del('categories',id);
-  S.categories=remaining;
-  if (S.catId===id) S.catId='all';
-  renderCatManager(); renderCatBar(); renderNotes();
-  toast('Category removed');
 };
 
 // ══════════════════════════════════════════
@@ -788,13 +648,13 @@ const exportData = async () => {
 const importData = async file => {
   try {
     const text=await file.text(); const data=JSON.parse(text);
-    if (!data.meetings||!data.categories||!data.notes) throw new Error('Invalid file format');
+    if (!data.meetings||!data.notes) throw new Error('Invalid file format');
     const ok=await confirm('Import Data','This will replace ALL current data. This cannot be undone.');
     if (!ok) return;
     await DB.importAll(data);
-    S.meetings=data.meetings; S.categories=data.categories; S.notes=data.notes;
-    S.meetingId=null; S.catId='all'; $('meeting-title').textContent='Select a Meeting';
-    renderMeetings(); renderCatBar(); renderNotes();
+    S.meetings=data.meetings; S.notes=data.notes;
+    S.meetingId=null; $('meeting-title').textContent='Select a Meeting';
+    renderMeetings(); renderNotes();
     toast('Imported successfully','ok');
   } catch(e) { toast('Import failed: '+e.message,'err'); }
 };
@@ -817,10 +677,7 @@ const Drive = (() => {
 
   const initClient = async cid => {
     await loadGIS();
-    tokenClient=google.accounts.oauth2.initTokenClient({
-      client_id:cid, scope:SCOPE,
-      callback:()=>{}
-    });
+    tokenClient=google.accounts.oauth2.initTokenClient({client_id:cid,scope:SCOPE,callback:()=>{}});
   };
 
   const getToken = () => new Promise((res,rej)=>{
@@ -894,8 +751,7 @@ const driveUpload = async () => {
     if (!Drive.isConnected()) await Drive.getToken();
     const data=await DB.exportAll();
     await Drive.upload(JSON.stringify(data,null,2));
-    clearDirty();
-    hideSyncBanner();
+    clearDirty(); hideSyncBanner();
     toast('Uploaded to Drive','ok');
   } catch(e) { toast('Upload failed: '+e.message,'err'); }
 };
@@ -908,11 +764,10 @@ const driveDownload = async () => {
     const text=await Drive.download();
     const data=JSON.parse(text);
     await DB.importAll(data);
-    S.meetings=data.meetings; S.categories=data.categories; S.notes=data.notes;
+    S.meetings=data.meetings; S.notes=data.notes;
     S.meetingId=null; $('meeting-title').textContent='Select a Meeting';
-    renderMeetings(); renderCatBar(); renderNotes();
-    clearDirty();
-    hideSyncBanner();
+    renderMeetings(); renderNotes();
+    clearDirty(); hideSyncBanner();
     toast('Downloaded from Drive','ok');
     closeM('drive-modal');
   } catch(e) { toast('Download failed: '+e.message,'err'); }
@@ -935,12 +790,10 @@ const closeSidebar = () => { $('sidebar').classList.remove('open'); $('sb-overla
 // EVENTS
 // ══════════════════════════════════════════
 const wire = () => {
-  // Sidebar
   $('menu-btn').onclick=openSidebar;
   $('sb-close-btn').onclick=closeSidebar;
   $('sb-overlay').onclick=closeSidebar;
 
-  // Meeting list delegation
   $('meeting-list').onclick=async e=>{
     const del=e.target.closest('[data-del-mid]');
     if (del) { await deleteMeeting(del.dataset.delMid); return; }
@@ -948,15 +801,10 @@ const wire = () => {
     if (item) selectMeeting(item.dataset.mid);
   };
 
-  // Add meeting
   $('add-meeting-btn').onclick=()=>{ $('meeting-name-input').value=''; openM('meeting-modal'); setTimeout(()=>$('meeting-name-input').focus(),50); };
   $('save-meeting-btn').onclick=addMeeting;
   $('meeting-name-input').onkeydown=e=>{ if(e.key==='Enter') addMeeting(); };
 
-  // Category bar delegation
-  $('cat-bar').onclick=e=>{ const t=e.target.closest('[data-cid]'); if(t){ S.catId=t.dataset.cid; renderCatBar(); renderNotes(); } };
-
-  // Notes
   $('add-note-btn').onclick=()=>openNoteEditor();
   $('notes-grid').onclick=async e=>{
     const del=e.target.closest('[data-del-nid]');
@@ -967,20 +815,10 @@ const wire = () => {
   $('save-note-btn').onclick=saveNote;
   $('del-note-btn').onclick=()=>{ if(S.editNoteId) deleteNote(S.editNoteId); };
 
-  // Categories
-  $('cats-btn').onclick=()=>{ renderCatManager(); openM('cats-modal'); };
-  $('m-cats-btn').onclick=()=>{ renderCatManager(); openM('cats-modal'); };
-  $('cats-list').onclick=async e=>{ const b=e.target.closest('[data-del-cat]'); if(b) await deleteCat(b.dataset.delCat); };
-  $('add-cat-btn').onclick=addCat;
-  $('new-cat-name').onkeydown=e=>{ if(e.key==='Enter') addCat(); };
-  $('color-grid').onclick=e=>{ const o=e.target.closest('[data-color]'); if(!o) return; pickedColor=o.dataset.color; document.querySelectorAll('.color-opt').forEach(el=>el.classList.toggle('sel',el.dataset.color===pickedColor)); };
-
-  // Export / Import
   $('export-btn').onclick=$('m-export-btn').onclick=exportData;
   $('import-btn').onclick=$('m-import-btn').onclick=()=>$('import-file').click();
   $('import-file').onchange=async e=>{ if(e.target.files[0]){ await importData(e.target.files[0]); e.target.value=''; } };
 
-  // Drive
   $('drive-btn').onclick=$('m-drive-btn').onclick=()=>{
     $('origin-display').textContent=location.origin||location.href;
     updateSyncTime(); updateDriveView(); openM('drive-modal');
@@ -990,19 +828,16 @@ const wire = () => {
   $('drive-download-btn').onclick=driveDownload;
   $('drive-disconnect-btn').onclick=driveDisconnect;
 
-  // Confirm
   $('confirm-ok').onclick=()=>{ closeM('confirm-modal'); if(_confirmResolve){_confirmResolve(true);_confirmResolve=null;} };
   $('confirm-cancel').onclick=()=>{ closeM('confirm-modal'); if(_confirmResolve){_confirmResolve(false);_confirmResolve=null;} };
 
-  // Close via data-close
   document.addEventListener('click',e=>{
     const el=e.target.closest('[data-close]');
     if (el) closeM(el.dataset.close);
   });
 
-  // Keyboard
   document.addEventListener('keydown',e=>{
-    if (e.key==='Escape') ['note-modal','meeting-modal','cats-modal','drive-modal','confirm-modal'].forEach(closeM);
+    if (e.key==='Escape') ['note-modal','meeting-modal','drive-modal','confirm-modal'].forEach(closeM);
     if ((e.ctrlKey||e.metaKey)&&e.key==='s') { e.preventDefault(); if(!$('note-modal').classList.contains('hidden')) saveNote(); }
   });
 };
@@ -1012,18 +847,15 @@ const wire = () => {
 // ══════════════════════════════════════════
 (async()=>{
   await DB.open();
-  const [meetings,categories,notes]=await Promise.all([DB.getAll('meetings'),DB.getAll('categories'),DB.getAll('notes')]);
+  const [meetings,notes]=await Promise.all([DB.getAll('meetings'),DB.getAll('notes')]);
   S.meetings=meetings.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
   S.notes=notes;
-  if (categories.length===0) { for(const c of DEFAULT_CATS) await DB.put('categories',c); S.categories=[...DEFAULT_CATS]; }
-  else S.categories=categories;
 
-  // Restore saved Drive client ID (user still needs to click Connect to re-auth)
   const savedCid=await DB.getSetting('drive_cid');
   if (savedCid) $('drive-cid').value=savedCid;
 
   initQuill();
-  renderMeetings(); renderCatBar(); renderNotes();
+  renderMeetings(); renderNotes();
   wire();
   checkSyncOnOpen();
 
@@ -1050,32 +882,20 @@ const showSyncBanner = (msg, btnLabel, btnAction) => {
 const checkSyncOnOpen = async () => {
   const cid = await DB.getSetting('drive_cid');
   if (!cid || !navigator.onLine) return;
-
   const lastSync = await DB.getSetting('drive_sync');
   const sinceSync = lastSync ? Date.now() - new Date(lastSync).getTime() : Infinity;
   const oneHour = 60 * 60 * 1000;
-
-  // Nudge download if Drive is set up but not synced in over an hour
   if (sinceSync > oneHour) {
-    showSyncBanner(
-      '☁ You may have notes on another device — download latest from Drive?',
-      '↓ Download',
-      async () => { hideSyncBanner(); await driveDownload(); }
-    );
+    showSyncBanner('☁ You may have notes on another device — download latest from Drive?','↓ Download',
+      async () => { hideSyncBanner(); await driveDownload(); });
     return;
   }
-
-  // Nudge upload if there are local unsaved changes
   if (isDirty()) {
-    showSyncBanner(
-      '☁ You have unsynced local changes — upload to Drive?',
-      '↑ Upload',
-      async () => { hideSyncBanner(); await driveUpload(); }
-    );
+    showSyncBanner('☁ You have unsynced local changes — upload to Drive?','↑ Upload',
+      async () => { hideSyncBanner(); await driveUpload(); });
   }
 };
 
-// Auto-upload silently when user switches away from the app
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'hidden') return;
   if (!isDirty() || !Drive.isConnected() || !navigator.onLine) return;
@@ -1083,14 +903,14 @@ document.addEventListener('visibilitychange', async () => {
     const data = await DB.exportAll();
     await Drive.upload(JSON.stringify(data, null, 2));
     clearDirty();
-  } catch(e) { /* silent fail — nudge will show on next open */ }
+  } catch(e) { /* silent fail */ }
 });
 
 // ══════════════════════════════════════════
 // LOCK SCREEN
 // ══════════════════════════════════════════
 const Lock = (() => {
-  const HASH_KEY   = 'mn_pw_hash';
+  const HASH_KEY    = 'mn_pw_hash';
   const SESSION_KEY = 'mn_session';
   const SESSION_DAYS = 30;
 
@@ -1099,8 +919,8 @@ const Lock = (() => {
     return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
   };
 
-  const hasPassword  = () => !!localStorage.getItem(HASH_KEY);
-  const hasSession   = () => {
+  const hasPassword = () => !!localStorage.getItem(HASH_KEY);
+  const hasSession  = () => {
     const s = localStorage.getItem(SESSION_KEY);
     if (!s) return false;
     const { expiry } = JSON.parse(s);
@@ -1108,36 +928,22 @@ const Lock = (() => {
   };
   const saveSession  = () => localStorage.setItem(SESSION_KEY, JSON.stringify({ expiry: Date.now() + SESSION_DAYS*86400*1000 }));
   const clearSession = () => localStorage.removeItem(SESSION_KEY);
-
-  const setPassword = async pin => {
-    localStorage.setItem(HASH_KEY, await sha256(pin));
-  };
-
+  const setPassword  = async pin => { localStorage.setItem(HASH_KEY, await sha256(pin)); };
   const checkPassword = async pin => {
     const stored = localStorage.getItem(HASH_KEY);
     return stored && stored === await sha256(pin);
   };
-
-  const reset = () => {
-    localStorage.removeItem(HASH_KEY);
-    localStorage.removeItem(SESSION_KEY);
-  };
+  const reset = () => { localStorage.removeItem(HASH_KEY); localStorage.removeItem(SESSION_KEY); };
 
   return { hasPassword, hasSession, saveSession, clearSession, setPassword, checkPassword, reset };
 })();
 
-const showApp = () => {
-  $('lock-screen').style.display = 'none';
-  $('app').style.display = '';
-};
+const showApp = () => { $('lock-screen').style.display='none'; $('app').style.display=''; };
 
 const initLock = () => {
   const firstTime = !Lock.hasPassword();
-
-  // Already have a valid session — skip straight to app
   if (!firstTime && Lock.hasSession()) { showApp(); return; }
 
-  // First-time setup mode
   if (firstTime) {
     $('lock-title').textContent = 'Create a Password';
     $('lock-sub').textContent   = 'Set a password to protect your notes';
@@ -1149,19 +955,15 @@ const initLock = () => {
   }
 
   let attempts = 0;
-
   const attempt = async () => {
     const val = $('lock-input').value;
     if (!val) { $('lock-error').textContent = 'Please enter a password'; return; }
-
     if (firstTime) {
       if (val.length < 4) { $('lock-error').textContent = 'Use at least 4 characters'; return; }
       await Lock.setPassword(val);
       if ($('lock-remember').checked) Lock.saveSession();
-      showApp();
-      return;
+      showApp(); return;
     }
-
     const ok = await Lock.checkPassword(val);
     if (ok) {
       if ($('lock-remember').checked) Lock.saveSession();
@@ -1178,12 +980,9 @@ const initLock = () => {
 
   $('lock-btn').onclick = attempt;
   $('lock-input').onkeydown = e => { if (e.key === 'Enter') attempt(); };
-
   $('lock-reset-btn').onclick = async () => {
-    const msg = 'This will erase your saved password. You will need to create a new one. Your notes are kept. Continue?';
-    if (!window.confirm(msg)) return;
-    Lock.reset();
-    location.reload();
+    if (!window.confirm('This will erase your saved password. You will need to create a new one. Your notes are kept. Continue?')) return;
+    Lock.reset(); location.reload();
   };
 };
 
