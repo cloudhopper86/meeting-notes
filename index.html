@@ -718,7 +718,12 @@ const Drive = (() => {
     return r.text();
   };
 
-  return {initClient,getToken,upload,download,isConnected:()=>!!token,disconnect:()=>{token=null;fileId=null;tokenClient=null;}};
+  const silentReconnect = () => new Promise((res,rej)=>{
+    tokenClient.callback=r=>{ if(r.error){rej(new Error(r.error));return;} token=r.access_token; res(); };
+    tokenClient.requestAccessToken({prompt:''});
+  });
+
+  return {initClient,getToken,silentReconnect,upload,download,isConnected:()=>!!token,disconnect:()=>{token=null;fileId=null;tokenClient=null;}};
 })();
 
 const updateSyncTime = async () => {
@@ -852,7 +857,14 @@ const wire = () => {
   S.notes=notes;
 
   const savedCid=await DB.getSetting('drive_cid');
-  if (savedCid) $('drive-cid').value=savedCid;
+  if (savedCid) {
+    $('drive-cid').value=savedCid;
+    try {
+      await Drive.initClient(savedCid);
+      await Drive.silentReconnect();
+      updateDriveView(); updateSyncTime();
+    } catch(e) { /* session expired — user will reconnect manually */ }
+  }
 
   initQuill();
   renderMeetings(); renderNotes();
