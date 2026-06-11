@@ -353,44 +353,39 @@ html,body{height:100%;overflow:hidden;font-family:'Instrument Sans',-apple-syste
   </div>
 </div>
 
-<!-- ══ Drive Modal ══ -->
+<!-- ══ GitHub Sync Modal ══ -->
 <div id="drive-modal" class="modal hidden">
   <div class="modal-bd" data-close="drive-modal"></div>
   <div class="modal-d">
     <div class="modal-head">
-      <h3>☁ Google Drive Sync</h3>
+      <h3>⚙ GitHub Sync</h3>
       <button class="btn-icon" data-close="drive-modal">✕</button>
     </div>
     <div class="modal-body">
       <div id="drive-disc">
         <div class="info-box" style="margin-bottom:14px;">
-          <strong>Setup steps</strong> — one-time Google Cloud config required:
-          <ol class="setup-ol">
-            <li>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener">console.cloud.google.com</a></li>
-            <li>Create a project → enable <strong>Google Drive API</strong></li>
-            <li>Credentials → Create <strong>OAuth 2.0 Client ID</strong> → Web Application</li>
-            <li>Add your app URL to <strong>Authorized JavaScript origins</strong>:<br><code id="origin-display"></code></li>
-            <li>Paste the Client ID below and click Connect</li>
-          </ol>
-          <br>Your data saves as <code>meeting-notes-data.json</code> in your Drive — accessible from any device.
+          Create a GitHub <strong>Personal Access Token</strong> with <code>repo</code> scope at
+          <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">github.com/settings/tokens/new</a>,
+          then paste it below.<br><br>
+          Your notes will sync to <code>meeting-notes-data.json</code> in <code>cloudhopper86/meeting-notes</code>.
         </div>
         <div class="fg">
-          <label>Google OAuth Client ID</label>
-          <input id="drive-cid" class="input" placeholder="xxxxxxxxx.apps.googleusercontent.com">
+          <label>GitHub Personal Access Token</label>
+          <input id="drive-cid" class="input" type="password" placeholder="ghp_...">
         </div>
-        <button id="drive-connect-btn" class="btn btn-primary btn-full">Connect Google Drive</button>
+        <button id="drive-connect-btn" class="btn btn-primary btn-full">Connect GitHub</button>
       </div>
       <div id="drive-conn" class="hidden">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
           <div class="drive-status-dot on" style="width:12px;height:12px;"></div>
           <div>
-            <div style="font-weight:600;">Connected to Google Drive</div>
-            <div class="text-muted">Data file: meeting-notes-data.json</div>
+            <div style="font-weight:600;">Connected to GitHub</div>
+            <div class="text-muted">cloudhopper86/meeting-notes → meeting-notes-data.json</div>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;">
-          <button id="drive-upload-btn" class="btn btn-primary btn-full">↑ Upload to Drive (overwrite cloud)</button>
-          <button id="drive-download-btn" class="btn btn-full">↓ Download from Drive (overwrite local)</button>
+          <button id="drive-upload-btn" class="btn btn-primary btn-full">↑ Upload to GitHub (overwrite cloud)</button>
+          <button id="drive-download-btn" class="btn btn-full">↓ Download from GitHub (overwrite local)</button>
           <div class="divider"></div>
           <div id="drive-sync-time" class="text-muted" style="text-align:center;"></div>
           <button id="drive-disconnect-btn" class="btn btn-danger btn-full">Disconnect</button>
@@ -660,79 +655,59 @@ const importData = async file => {
 };
 
 // ══════════════════════════════════════════
-// GOOGLE DRIVE
+// GITHUB SYNC
 // ══════════════════════════════════════════
-const Drive = (() => {
-  let token=null, fileId=null, tokenClient=null, gisReady=false;
-  const FILE='meeting-notes-data.json';
-  const SCOPE='https://www.googleapis.com/auth/drive.file';
-
-  const loadGIS = () => new Promise((res,rej)=>{
-    if (gisReady) { res(); return; }
-    const s=document.createElement('script');
-    s.src='https://accounts.google.com/gsi/client';
-    s.onload=()=>{ gisReady=true; res(); }; s.onerror=rej;
-    document.head.appendChild(s);
-  });
-
-  const initClient = async cid => {
-    await loadGIS();
-    tokenClient=google.accounts.oauth2.initTokenClient({client_id:cid,scope:SCOPE,callback:()=>{}});
-  };
-
-  const getToken = () => new Promise((res,rej)=>{
-    tokenClient.callback=r=>{ if(r.error){rej(new Error(r.error));return;} token=r.access_token; res(); };
-    tokenClient.requestAccessToken({prompt:token?'':'consent'});
-  });
-
-  const headers = () => ({Authorization:`Bearer ${token}`});
-
-  const findFile = async () => {
-    const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=name%3D'${FILE}'%20and%20trashed%3Dfalse`,{headers:headers()});
-    const d=await r.json(); return d.files?.[0]?.id||null;
-  };
+const GitHub = (() => {
+  let token=null;
+  const OWNER='cloudhopper86', REPO='meeting-notes', FILE='meeting-notes-data.json';
+  const API=`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`;
+  const hdrs = () => ({'Authorization':`Bearer ${token}`,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'});
 
   const upload = async json => {
-    if (!fileId) fileId=await findFile();
-    const blob=new Blob([json],{type:'application/json'});
-    if (fileId) {
-      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
-        {method:'PATCH',headers:{...headers(),'Content-Type':'application/json'},body:blob});
-    } else {
-      const form=new FormData();
-      form.append('metadata',new Blob([JSON.stringify({name:FILE,mimeType:'application/json'})],{type:'application/json'}));
-      form.append('file',blob);
-      const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-        {method:'POST',headers:headers(),body:form});
-      fileId=(await r.json()).id;
-    }
-    await DB.setSetting('drive_sync',new Date().toISOString());
+    const getR=await fetch(API,{headers:hdrs()});
+    const sha=getR.ok?(await getR.json()).sha:null;
+    const content=btoa(unescape(encodeURIComponent(json)));
+    const body={message:'Update meeting notes',content};
+    if (sha) body.sha=sha;
+    const r=await fetch(API,{method:'PUT',headers:{...hdrs(),'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if (!r.ok) throw new Error((await r.json()).message||'Upload failed');
+    await DB.setSetting('github_sync',new Date().toISOString());
     updateSyncTime();
   };
 
   const download = async () => {
-    if (!fileId) fileId=await findFile();
-    if (!fileId) throw new Error('No backup found on Drive');
-    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,{headers:headers()});
-    if (!r.ok) throw new Error('Download failed');
-    return r.text();
+    const r=await fetch(API,{headers:hdrs()});
+    if (!r.ok) throw new Error('No backup found in repo');
+    const d=await r.json();
+    return decodeURIComponent(escape(atob(d.content.replace(/\n/g,''))));
   };
 
-  const silentReconnect = () => new Promise((res,rej)=>{
-    tokenClient.callback=r=>{ if(r.error){rej(new Error(r.error));return;} token=r.access_token; res(); };
-    tokenClient.requestAccessToken({prompt:''});
-  });
+  const connect = async pat => {
+    const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}`,
+      {headers:{'Authorization':`Bearer ${pat}`,'Accept':'application/vnd.github+json'}});
+    if (!r.ok) throw new Error('Token invalid or no repo access');
+    token=pat;
+    await DB.setSetting('github_token',pat);
+  };
 
-  return {initClient,getToken,silentReconnect,upload,download,isConnected:()=>!!token,disconnect:()=>{token=null;fileId=null;tokenClient=null;}};
+  const restore = async () => {
+    const saved=await DB.getSetting('github_token');
+    if (saved) token=saved;
+    return !!saved;
+  };
+
+  const disconnect = async () => { token=null; await DB.setSetting('github_token',null); };
+
+  return {connect,upload,download,restore,isConnected:()=>!!token,disconnect};
 })();
 
 const updateSyncTime = async () => {
-  const t=await DB.getSetting('drive_sync');
+  const t=await DB.getSetting('github_sync');
   $('drive-sync-time').textContent=t?'Last sync: '+new Date(t).toLocaleString():'Never synced';
 };
 
 const updateDriveView = () => {
-  const on=Drive.isConnected();
+  const on=GitHub.isConnected();
   $('drive-disc').classList.toggle('hidden',on);
   $('drive-conn').classList.toggle('hidden',!on);
   $('drive-btn').classList.toggle('drive-on',on);
@@ -740,48 +715,44 @@ const updateDriveView = () => {
 };
 
 const driveConnect = async () => {
-  const cid=$('drive-cid').value.trim();
-  if (!cid) { toast('Enter your OAuth Client ID','err'); return; }
+  const pat=$('drive-cid').value.trim();
+  if (!pat) { toast('Enter your GitHub token','err'); return; }
   try {
-    await Drive.initClient(cid);
-    await Drive.getToken();
-    await DB.setSetting('drive_cid',cid);
+    await GitHub.connect(pat);
     updateDriveView(); updateSyncTime();
-    toast('Google Drive connected!','ok');
+    toast('GitHub connected!','ok');
   } catch(e) { toast('Connect failed: '+e.message,'err'); }
 };
 
 const driveUpload = async () => {
   try {
-    if (!Drive.isConnected()) await Drive.getToken();
     const data=await DB.exportAll();
-    await Drive.upload(JSON.stringify(data,null,2));
+    await GitHub.upload(JSON.stringify(data,null,2));
     clearDirty(); hideSyncBanner();
-    toast('Uploaded to Drive','ok');
+    toast('Uploaded to GitHub','ok');
   } catch(e) { toast('Upload failed: '+e.message,'err'); }
 };
 
 const driveDownload = async () => {
-  const ok=await confirm('Download from Drive','This will replace all local data with the Drive backup.');
+  const ok=await confirm('Download from GitHub','This will replace all local data with the GitHub backup.');
   if (!ok) return;
   try {
-    if (!Drive.isConnected()) await Drive.getToken();
-    const text=await Drive.download();
+    const text=await GitHub.download();
     const data=JSON.parse(text);
     await DB.importAll(data);
     S.meetings=data.meetings; S.notes=data.notes;
     S.meetingId=null; $('meeting-title').textContent='Select a Meeting';
     renderMeetings(); renderNotes();
     clearDirty(); hideSyncBanner();
-    toast('Downloaded from Drive','ok');
+    toast('Downloaded from GitHub','ok');
     closeM('drive-modal');
   } catch(e) { toast('Download failed: '+e.message,'err'); }
 };
 
 const driveDisconnect = async () => {
-  const ok=await confirm('Disconnect','Disconnect Google Drive?');
+  const ok=await confirm('Disconnect','Disconnect GitHub sync?');
   if (!ok) return;
-  Drive.disconnect(); await DB.setSetting('drive_cid',null);
+  await GitHub.disconnect();
   updateDriveView(); toast('Disconnected');
 };
 
@@ -825,7 +796,6 @@ const wire = () => {
   $('import-file').onchange=async e=>{ if(e.target.files[0]){ await importData(e.target.files[0]); e.target.value=''; } };
 
   $('drive-btn').onclick=$('m-drive-btn').onclick=()=>{
-    $('origin-display').textContent=location.origin||location.href;
     updateSyncTime(); updateDriveView(); openM('drive-modal');
   };
   $('drive-connect-btn').onclick=driveConnect;
@@ -856,15 +826,8 @@ const wire = () => {
   S.meetings=meetings.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
   S.notes=notes;
 
-  const savedCid=await DB.getSetting('drive_cid');
-  if (savedCid) {
-    $('drive-cid').value=savedCid;
-    try {
-      await Drive.initClient(savedCid);
-      await Drive.silentReconnect();
-      updateDriveView(); updateSyncTime();
-    } catch(e) { /* session expired — user will reconnect manually */ }
-  }
+  const restored=await GitHub.restore();
+  if (restored) { updateDriveView(); updateSyncTime(); }
 
   initQuill();
   renderMeetings(); renderNotes();
@@ -892,29 +855,27 @@ const showSyncBanner = (msg, btnLabel, btnAction) => {
 };
 
 const checkSyncOnOpen = async () => {
-  const cid = await DB.getSetting('drive_cid');
-  if (!cid || !navigator.onLine) return;
-  await Drive.initClient(cid);
-  const lastSync = await DB.getSetting('drive_sync');
+  if (!GitHub.isConnected() || !navigator.onLine) return;
+  const lastSync = await DB.getSetting('github_sync');
   const sinceSync = lastSync ? Date.now() - new Date(lastSync).getTime() : Infinity;
   const oneHour = 60 * 60 * 1000;
   if (sinceSync > oneHour) {
-    showSyncBanner('☁ You may have notes on another device — download latest from Drive?','↓ Download',
+    showSyncBanner('☁ You may have notes on another device — download latest from GitHub?','↓ Download',
       async () => { hideSyncBanner(); await driveDownload(); });
     return;
   }
   if (isDirty()) {
-    showSyncBanner('☁ You have unsynced local changes — upload to Drive?','↑ Upload',
+    showSyncBanner('☁ You have unsynced local changes — upload to GitHub?','↑ Upload',
       async () => { hideSyncBanner(); await driveUpload(); });
   }
 };
 
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'hidden') return;
-  if (!isDirty() || !Drive.isConnected() || !navigator.onLine) return;
+  if (!isDirty() || !GitHub.isConnected() || !navigator.onLine) return;
   try {
     const data = await DB.exportAll();
-    await Drive.upload(JSON.stringify(data, null, 2));
+    await GitHub.upload(JSON.stringify(data, null, 2));
     clearDirty();
   } catch(e) { /* silent fail */ }
 });
