@@ -222,10 +222,41 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 @media(max-width:768px){.mob-strip{display:flex;}}
 
 #import-file{display:none;}
+
+/* ── Lock screen ── */
+#lock-screen{position:fixed;inset:0;z-index:9999;background:var(--bg-app);display:flex;align-items:center;justify-content:center;padding:24px;}
+.lock-box{background:var(--bg-modal);border:1px solid var(--border-s);border-radius:16px;padding:36px 32px;width:100%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:20px;box-shadow:0 24px 64px rgba(0,0,0,.6);}
+.lock-icon{width:56px;height:56px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;}
+.lock-title{font-size:20px;font-weight:700;text-align:center;}
+.lock-sub{font-size:13px;color:var(--text-3);text-align:center;margin-top:-10px;}
+.lock-box .input{text-align:center;letter-spacing:2px;font-size:15px;}
+.lock-error{font-size:13px;color:var(--danger);text-align:center;min-height:18px;}
+.lock-remember{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);cursor:pointer;}
+.lock-remember input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
 </style>
 </head>
 <body>
-<div id="app">
+
+<!-- Lock screen (shown before app loads) -->
+<div id="lock-screen">
+  <div class="lock-box">
+    <div class="lock-icon">📋</div>
+    <div class="lock-title" id="lock-title">Meeting Notes</div>
+    <div class="lock-sub" id="lock-sub">Enter your password to continue</div>
+    <input id="lock-input" class="input" type="password" placeholder="Password" autocomplete="current-password">
+    <div class="lock-error" id="lock-error"></div>
+    <label class="lock-remember">
+      <input type="checkbox" id="lock-remember" checked>
+      Stay logged in for 30 days
+    </label>
+    <button id="lock-btn" class="btn btn-primary btn-full" style="font-size:15px;padding:10px;">Unlock</button>
+    <div id="lock-reset-wrap" style="display:none;">
+      <button id="lock-reset-btn" class="btn btn-sm" style="color:var(--text-3);border-color:transparent;background:none;">Forgot password? Reset app</button>
+    </div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
 
   <!-- Sidebar overlay -->
   <div id="sb-overlay" class="sb-overlay"></div>
@@ -977,6 +1008,109 @@ const wire = () => {
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
+
+// ══════════════════════════════════════════
+// LOCK SCREEN
+// ══════════════════════════════════════════
+const Lock = (() => {
+  const HASH_KEY   = 'mn_pw_hash';
+  const SESSION_KEY = 'mn_session';
+  const SESSION_DAYS = 30;
+
+  const sha256 = async str => {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  };
+
+  const hasPassword  = () => !!localStorage.getItem(HASH_KEY);
+  const hasSession   = () => {
+    const s = localStorage.getItem(SESSION_KEY);
+    if (!s) return false;
+    const { expiry } = JSON.parse(s);
+    return Date.now() < expiry;
+  };
+  const saveSession  = () => localStorage.setItem(SESSION_KEY, JSON.stringify({ expiry: Date.now() + SESSION_DAYS*86400*1000 }));
+  const clearSession = () => localStorage.removeItem(SESSION_KEY);
+
+  const setPassword = async pin => {
+    localStorage.setItem(HASH_KEY, await sha256(pin));
+  };
+
+  const checkPassword = async pin => {
+    const stored = localStorage.getItem(HASH_KEY);
+    return stored && stored === await sha256(pin);
+  };
+
+  const reset = () => {
+    localStorage.removeItem(HASH_KEY);
+    localStorage.removeItem(SESSION_KEY);
+  };
+
+  return { hasPassword, hasSession, saveSession, clearSession, setPassword, checkPassword, reset };
+})();
+
+const showApp = () => {
+  $('lock-screen').style.display = 'none';
+  $('app').style.display = '';
+};
+
+const initLock = () => {
+  const firstTime = !Lock.hasPassword();
+
+  // Already have a valid session — skip straight to app
+  if (!firstTime && Lock.hasSession()) { showApp(); return; }
+
+  // First-time setup mode
+  if (firstTime) {
+    $('lock-title').textContent = 'Create a Password';
+    $('lock-sub').textContent   = 'Set a password to protect your notes';
+    $('lock-btn').textContent   = 'Set Password';
+    $('lock-input').placeholder = 'Choose a password';
+    $('lock-input').autocomplete = 'new-password';
+  } else {
+    $('lock-reset-wrap').style.display = '';
+  }
+
+  let attempts = 0;
+
+  const attempt = async () => {
+    const val = $('lock-input').value;
+    if (!val) { $('lock-error').textContent = 'Please enter a password'; return; }
+
+    if (firstTime) {
+      if (val.length < 4) { $('lock-error').textContent = 'Use at least 4 characters'; return; }
+      await Lock.setPassword(val);
+      if ($('lock-remember').checked) Lock.saveSession();
+      showApp();
+      return;
+    }
+
+    const ok = await Lock.checkPassword(val);
+    if (ok) {
+      if ($('lock-remember').checked) Lock.saveSession();
+      showApp();
+    } else {
+      attempts++;
+      $('lock-input').value = '';
+      $('lock-error').textContent = attempts >= 3
+        ? 'Incorrect password. Use the reset button below if needed.'
+        : 'Incorrect password';
+      if (attempts >= 3) $('lock-reset-wrap').style.display = '';
+    }
+  };
+
+  $('lock-btn').onclick = attempt;
+  $('lock-input').onkeydown = e => { if (e.key === 'Enter') attempt(); };
+
+  $('lock-reset-btn').onclick = async () => {
+    const msg = 'This will erase your saved password. You will need to create a new one. Your notes are kept. Continue?';
+    if (!window.confirm(msg)) return;
+    Lock.reset();
+    location.reload();
+  };
+};
+
+initLock();
 </script>
 </body>
 </html>
