@@ -223,6 +223,11 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 
 #import-file{display:none;}
 
+/* ── Sync nudge banner ── */
+.sync-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 18px;background:rgba(124,58,237,.15);border-bottom:1px solid rgba(124,58,237,.35);font-size:13px;color:var(--accent-light);flex-shrink:0;flex-wrap:wrap;}
+.sync-banner.hidden{display:none!important;}
+@media(max-width:768px){.sync-banner{padding:9px 12px;}}
+
 /* ── Lock screen ── */
 #lock-screen{position:fixed;inset:0;z-index:9999;background:var(--bg-app);display:flex;align-items:center;justify-content:center;padding:24px;}
 .lock-box{background:var(--bg-modal);border:1px solid var(--border-s);border-radius:16px;padding:36px 32px;width:100%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:20px;box-shadow:0 24px 64px rgba(0,0,0,.6);}
@@ -298,6 +303,15 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
       <button id="m-import-btn" class="btn btn-sm">↓ Import</button>
       <button id="m-drive-btn" class="btn btn-sm">☁ Drive</button>
       <button id="m-cats-btn" class="btn btn-sm">🏷 Categories</button>
+    </div>
+
+    <!-- Sync nudge banner -->
+    <div id="sync-banner" class="sync-banner hidden">
+      <span id="sync-banner-msg"></span>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button id="sync-banner-btn" class="btn btn-sm btn-primary"></button>
+        <button id="sync-banner-dismiss" class="btn btn-sm">Dismiss</button>
+      </div>
     </div>
 
     <!-- Category bar -->
@@ -714,6 +728,7 @@ const saveNote = async () => {
   if (S.editNoteId) { const i=S.notes.findIndex(n=>n.id===S.editNoteId); if(i>=0) S.notes[i]=note; else S.notes.push(note); }
   else S.notes.push(note);
   closeM('note-modal'); renderCatBar(); renderNotes();
+  markDirty();
   toast('Note saved','ok');
 };
 
@@ -723,6 +738,7 @@ const deleteNote = async id => {
   await DB.del('notes',id);
   S.notes=S.notes.filter(n=>n.id!==id);
   closeM('note-modal'); renderCatBar(); renderNotes();
+  markDirty();
   toast('Note deleted');
 };
 
@@ -878,6 +894,8 @@ const driveUpload = async () => {
     if (!Drive.isConnected()) await Drive.getToken();
     const data=await DB.exportAll();
     await Drive.upload(JSON.stringify(data,null,2));
+    clearDirty();
+    hideSyncBanner();
     toast('Uploaded to Drive','ok');
   } catch(e) { toast('Upload failed: '+e.message,'err'); }
 };
@@ -893,6 +911,8 @@ const driveDownload = async () => {
     S.meetings=data.meetings; S.categories=data.categories; S.notes=data.notes;
     S.meetingId=null; $('meeting-title').textContent='Select a Meeting';
     renderMeetings(); renderCatBar(); renderNotes();
+    clearDirty();
+    hideSyncBanner();
     toast('Downloaded from Drive','ok');
     closeM('drive-modal');
   } catch(e) { toast('Download failed: '+e.message,'err'); }
@@ -1005,9 +1025,66 @@ const wire = () => {
   initQuill();
   renderMeetings(); renderCatBar(); renderNotes();
   wire();
+  checkSyncOnOpen();
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
+
+// ══════════════════════════════════════════
+// SYNC NUDGE
+// ══════════════════════════════════════════
+const DIRTY_KEY = 'mn_dirty';
+const markDirty  = () => localStorage.setItem(DIRTY_KEY, Date.now());
+const clearDirty = () => localStorage.removeItem(DIRTY_KEY);
+const isDirty    = () => !!localStorage.getItem(DIRTY_KEY);
+
+const hideSyncBanner = () => $('sync-banner').classList.add('hidden');
+const showSyncBanner = (msg, btnLabel, btnAction) => {
+  $('sync-banner-msg').textContent = msg;
+  $('sync-banner-btn').textContent = btnLabel;
+  $('sync-banner-btn').onclick = btnAction;
+  $('sync-banner-dismiss').onclick = hideSyncBanner;
+  $('sync-banner').classList.remove('hidden');
+};
+
+const checkSyncOnOpen = async () => {
+  const cid = await DB.getSetting('drive_cid');
+  if (!cid || !navigator.onLine) return;
+
+  const lastSync = await DB.getSetting('drive_sync');
+  const sinceSync = lastSync ? Date.now() - new Date(lastSync).getTime() : Infinity;
+  const oneHour = 60 * 60 * 1000;
+
+  // Nudge download if Drive is set up but not synced in over an hour
+  if (sinceSync > oneHour) {
+    showSyncBanner(
+      '☁ You may have notes on another device — download latest from Drive?',
+      '↓ Download',
+      async () => { hideSyncBanner(); await driveDownload(); }
+    );
+    return;
+  }
+
+  // Nudge upload if there are local unsaved changes
+  if (isDirty()) {
+    showSyncBanner(
+      '☁ You have unsynced local changes — upload to Drive?',
+      '↑ Upload',
+      async () => { hideSyncBanner(); await driveUpload(); }
+    );
+  }
+};
+
+// Auto-upload silently when user switches away from the app
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'hidden') return;
+  if (!isDirty() || !Drive.isConnected() || !navigator.onLine) return;
+  try {
+    const data = await DB.exportAll();
+    await Drive.upload(JSON.stringify(data, null, 2));
+    clearDirty();
+  } catch(e) { /* silent fail — nudge will show on next open */ }
+});
 
 // ══════════════════════════════════════════
 // LOCK SCREEN
