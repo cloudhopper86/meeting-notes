@@ -366,11 +366,20 @@ html,body{height:100%;overflow:hidden;font-family:'Instrument Sans',-apple-syste
         <div class="info-box" style="margin-bottom:14px;">
           Create a GitHub <strong>Personal Access Token</strong> with <code>repo</code> scope at
           <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">github.com/settings/tokens/new</a>,
-          then paste it below.<br><br>
-          Your notes will sync to <code>meeting-notes-data.json</code> in <code>cloudhopper86/meeting-notes-data</code>.
+          then fill in the fields below. Your notes sync to <code>meeting-notes-data.json</code> in the repo you specify.
+        </div>
+        <div style="display:flex;gap:10px;">
+          <div class="fg" style="flex:1;margin-bottom:14px;">
+            <label>Repository Owner</label>
+            <input id="github-owner" class="input" placeholder="e.g. cloudhopper86">
+          </div>
+          <div class="fg" style="flex:1;margin-bottom:14px;">
+            <label>Repository Name</label>
+            <input id="github-repo-input" class="input" placeholder="e.g. meeting-notes-data">
+          </div>
         </div>
         <div class="fg">
-          <label>GitHub Personal Access Token</label>
+          <label>Personal Access Token</label>
           <input id="drive-cid" class="input" type="password" placeholder="ghp_...">
         </div>
         <button id="drive-connect-btn" class="btn btn-primary btn-full">Connect GitHub</button>
@@ -380,7 +389,7 @@ html,body{height:100%;overflow:hidden;font-family:'Instrument Sans',-apple-syste
           <div class="drive-status-dot on" style="width:12px;height:12px;"></div>
           <div>
             <div style="font-weight:600;">Connected to GitHub</div>
-            <div class="text-muted">cloudhopper86/meeting-notes-data → meeting-notes-data.json</div>
+            <div class="text-muted" id="github-repo-display"></div>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;">
@@ -658,47 +667,52 @@ const importData = async file => {
 // GITHUB SYNC
 // ══════════════════════════════════════════
 const GitHub = (() => {
-  let token=null;
-  const OWNER='cloudhopper86', REPO='meeting-notes-data', FILE='meeting-notes-data.json';
-  const API=`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`;
+  let token=null, owner=null, repo=null;
+  const FILE='meeting-notes-data.json';
+  const api = () => `https://api.github.com/repos/${owner}/${repo}/contents/${FILE}`;
   const hdrs = () => ({'Authorization':`Bearer ${token}`,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'});
 
   const upload = async json => {
-    const getR=await fetch(API,{headers:hdrs()});
+    const getR=await fetch(api(),{headers:hdrs()});
     const sha=getR.ok?(await getR.json()).sha:null;
     const content=btoa(unescape(encodeURIComponent(json)));
     const body={message:'Update meeting notes',content};
     if (sha) body.sha=sha;
-    const r=await fetch(API,{method:'PUT',headers:{...hdrs(),'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const r=await fetch(api(),{method:'PUT',headers:{...hdrs(),'Content-Type':'application/json'},body:JSON.stringify(body)});
     if (!r.ok) throw new Error((await r.json()).message||'Upload failed');
     await DB.setSetting('github_sync',new Date().toISOString());
     updateSyncTime();
   };
 
   const download = async () => {
-    const r=await fetch(API,{headers:hdrs()});
+    const r=await fetch(api(),{headers:hdrs()});
     if (!r.ok) throw new Error('No backup found in repo');
     const d=await r.json();
     return decodeURIComponent(escape(atob(d.content.replace(/\n/g,''))));
   };
 
-  const connect = async pat => {
-    const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}`,
+  const connect = async (pat, ownerVal, repoVal) => {
+    const r=await fetch(`https://api.github.com/repos/${ownerVal}/${repoVal}`,
       {headers:{'Authorization':`Bearer ${pat}`,'Accept':'application/vnd.github+json'}});
     if (!r.ok) throw new Error('Token invalid or no repo access');
-    token=pat;
+    token=pat; owner=ownerVal; repo=repoVal;
     await DB.setSetting('github_token',pat);
+    await DB.setSetting('github_owner',ownerVal);
+    await DB.setSetting('github_repo',repoVal);
   };
 
   const restore = async () => {
-    const saved=await DB.getSetting('github_token');
-    if (saved) token=saved;
-    return !!saved;
+    const [t,o,r]=await Promise.all([DB.getSetting('github_token'),DB.getSetting('github_owner'),DB.getSetting('github_repo')]);
+    if (t&&o&&r) { token=t; owner=o; repo=r; return true; }
+    return false;
   };
 
-  const disconnect = async () => { token=null; await DB.setSetting('github_token',null); };
+  const disconnect = async () => {
+    token=null; owner=null; repo=null;
+    await Promise.all([DB.setSetting('github_token',null),DB.setSetting('github_owner',null),DB.setSetting('github_repo',null)]);
+  };
 
-  return {connect,upload,download,restore,isConnected:()=>!!token,disconnect};
+  return {connect,upload,download,restore,isConnected:()=>!!token,disconnect,repoPath:()=>owner&&repo?`${owner}/${repo}`:''};
 })();
 
 const updateSyncTime = async () => {
@@ -712,13 +726,17 @@ const updateDriveView = () => {
   $('drive-conn').classList.toggle('hidden',!on);
   $('drive-btn').classList.toggle('drive-on',on);
   $('m-drive-btn').classList.toggle('drive-on',on);
+  if (on) $('github-repo-display').textContent=`${GitHub.repoPath()} → meeting-notes-data.json`;
 };
 
 const driveConnect = async () => {
   const pat=$('drive-cid').value.trim();
+  const owner=$('github-owner').value.trim();
+  const repo=$('github-repo-input').value.trim();
+  if (!owner||!repo) { toast('Enter repository owner and name','err'); return; }
   if (!pat) { toast('Enter your GitHub token','err'); return; }
   try {
-    await GitHub.connect(pat);
+    await GitHub.connect(pat, owner, repo);
     updateDriveView(); updateSyncTime();
     toast('GitHub connected!','ok');
   } catch(e) { toast('Connect failed: '+e.message,'err'); }
@@ -795,7 +813,10 @@ const wire = () => {
   $('import-btn').onclick=$('m-import-btn').onclick=()=>$('import-file').click();
   $('import-file').onchange=async e=>{ if(e.target.files[0]){ await importData(e.target.files[0]); e.target.value=''; } };
 
-  $('drive-btn').onclick=$('m-drive-btn').onclick=()=>{
+  $('drive-btn').onclick=$('m-drive-btn').onclick=async ()=>{
+    const [o,r]=await Promise.all([DB.getSetting('github_owner'),DB.getSetting('github_repo')]);
+    if (o) $('github-owner').value=o;
+    if (r) $('github-repo-input').value=r;
     updateSyncTime(); updateDriveView(); openM('drive-modal');
   };
   $('drive-connect-btn').onclick=driveConnect;
