@@ -626,6 +626,7 @@ const saveNote = async () => {
   closeM('note-modal'); renderNotes();
   markDirty();
   toast('Note saved','ok');
+  autoSync();
 };
 
 const deleteNote = async id => {
@@ -636,6 +637,7 @@ const deleteNote = async id => {
   closeM('note-modal'); renderNotes();
   markDirty();
   toast('Note deleted');
+  autoSync();
 };
 
 // ══════════════════════════════════════════
@@ -749,6 +751,16 @@ const driveUpload = async () => {
     clearDirty(); hideSyncBanner();
     toast('Uploaded to GitHub','ok');
   } catch(e) { toast('Upload failed: '+e.message,'err'); }
+};
+
+const autoSync = async () => {
+  if (!GitHub.isConnected() || !navigator.onLine) return;
+  try {
+    const data=await DB.exportAll();
+    await GitHub.upload(JSON.stringify(data,null,2));
+    clearDirty(); hideSyncBanner();
+    toast('☁ Synced to GitHub','ok');
+  } catch(e) { toast('Auto-sync failed: '+e.message,'err'); }
 };
 
 const driveDownload = async () => {
