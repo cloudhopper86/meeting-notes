@@ -137,8 +137,8 @@ html,body{height:100%;overflow:hidden;font-family:'Instrument Sans',-apple-syste
 .sel option{background:var(--bg-card);}
 .fg{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
 .fg label{font-size:15px;font-weight:500;color:var(--text-2);}
-.note-date-input{flex:1;background:none;border:none;outline:none;font-size:21px;font-weight:600;color:var(--text-1);font-family:inherit;cursor:pointer;color-scheme:dark;}
-.note-date-input::-webkit-calendar-picker-indicator{filter:invert(0.6);cursor:pointer;margin-left:4px;}
+.note-title-input{flex:1;background:none;border:none;outline:none;font-size:21px;font-weight:600;color:var(--text-1);font-family:inherit;}
+.note-title-input::placeholder{color:var(--text-3);}
 .divider{height:1px;background:var(--border);margin:14px 0;}
 .info-box{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.28);border-radius:var(--r-sm);padding:12px 13px;font-size:15px;color:var(--text-2);line-height:1.65;}
 .info-box code{background:rgba(255,255,255,.09);padding:1px 5px;border-radius:3px;font-size:14px;color:var(--accent-light);}
@@ -316,7 +316,7 @@ html,body{height:100%;overflow:hidden;font-family:'Instrument Sans',-apple-syste
   <div class="modal-bd" data-close="note-modal"></div>
   <div class="modal-d lg">
     <div class="modal-head">
-      <input type="date" id="note-date" class="note-date-input">
+      <input type="text" id="note-title" class="note-title-input" placeholder="Note title…">
       <button class="btn-icon" data-close="note-modal">✕</button>
     </div>
     <div class="editor-wrap">
@@ -473,22 +473,6 @@ const S = { meetings:[], notes:[], meetingId:null, editNoteId:null };
 // UTILS
 // ══════════════════════════════════════════
 const uid = () => 'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
-const today = () => new Date().toISOString().slice(0,10);
-const fmtDate = d => { if(!d) return ''; const dt=new Date(d+'T00:00'); return dt.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); };
-const daysUntil = d => {
-  if (!d) return '';
-  const now = new Date(); now.setHours(0,0,0,0);
-  const target = new Date(d+'T00:00');
-  const diff = Math.round((target - now) / 86400000);
-  if (diff === 0) return 'today';
-  const abs = Math.abs(diff);
-  const suffix = diff < 0 ? ' ago' : '';
-  if (abs < 7) return `${abs} ${abs===1?'day':'days'}${suffix}`;
-  const weeks = Math.floor(abs/7), days = abs%7;
-  const wStr = `${weeks} ${weeks===1?'week':'weeks'}`;
-  if (days === 0) return wStr+suffix;
-  return `${wStr} and ${days} ${days===1?'day':'days'}${suffix}`;
-};
 const esc = s => String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const $ = id => document.getElementById(id);
 const openM  = id => $(id).classList.remove('hidden');
@@ -543,7 +527,7 @@ const renderNotes = () => {
     return;
   }
   addRow.classList.remove('hidden');
-  const notes = S.notes.filter(n=>n.meetingId===S.meetingId).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const notes = S.notes.filter(n=>n.meetingId===S.meetingId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
   if (!notes.length) {
     grid.classList.add('hidden'); empty.classList.remove('hidden');
     empty.innerHTML=`<div class="empty-icon">✏️</div><div class="empty-title">No notes yet</div><div class="empty-sub">Click "+ Add Note" to create one.</div>`;
@@ -554,7 +538,7 @@ const renderNotes = () => {
     <div class="note-card" data-nid="${n.id}">
       <div class="note-card-top"></div>
       <div class="note-card-head">
-        <div class="note-card-title">${esc(fmtDate(n.date)||'No date')}${n.date?` <span style="font-weight:400;color:var(--text-3);font-size:14px;">[${daysUntil(n.date)}]</span>`:''}</div>
+        <div class="note-card-title">${esc(n.title||'Untitled')}</div>
         <button class="note-card-del" data-del-nid="${n.id}" title="Delete">🗑</button>
       </div>
       ${n.content?`<div class="note-preview">${n.content}</div>`:''}
@@ -603,7 +587,7 @@ const deleteMeeting = async id => {
 const openNoteEditor = (noteId=null) => {
   S.editNoteId=noteId;
   const n=noteId?S.notes.find(n=>n.id===noteId):null;
-  $('note-date').value=n?.date||today();
+  $('note-title').value=n?.title||'';
   $('del-note-btn').classList.toggle('hidden',!noteId);
   if (quill) quill.root.innerHTML=n?.content||'';
   openM('note-modal');
@@ -611,12 +595,12 @@ const openNoteEditor = (noteId=null) => {
 };
 
 const saveNote = async () => {
-  const date=$('note-date').value||today();
+  const title=$('note-title').value.trim();
   const content=quill?quill.root.innerHTML:'';
   const existing=S.editNoteId?S.notes.find(n=>n.id===S.editNoteId):null;
   const note={
     id:S.editNoteId||uid(), meetingId:S.meetingId,
-    date, content,
+    title, content,
     createdAt:existing?.createdAt||new Date().toISOString(),
     updatedAt:new Date().toISOString()
   };
